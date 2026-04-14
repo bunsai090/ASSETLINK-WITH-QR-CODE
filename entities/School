@@ -1,0 +1,37 @@
+{
+  "name": "School",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "School Name"
+    },
+    "address": {
+      "type": "string",
+      "title": "Address"
+    },
+    "region": {
+      "type": "string",
+      "title": "Region"
+    },
+    "division": {
+      "type": "string",
+      "title": "Division"
+    },
+    "principal_name": {
+      "type": "string",
+      "title": "Principal Name"
+    },
+    "contact_email": {
+      "type": "string",
+      "title": "Contact Email"
+    },
+    "contact_phone": {
+      "type": "string",
+      "title": "Contact Phone"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

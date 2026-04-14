@@ -1,0 +1,83 @@
+{
+  "name": "Asset",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Asset Name"
+    },
+    "asset_code": {
+      "type": "string",
+      "title": "Asset Code"
+    },
+    "category": {
+      "type": "string",
+      "title": "Category",
+      "enum": [
+        "Furniture",
+        "Electronics",
+        "Laboratory Equipment",
+        "Sports Equipment",
+        "Books & Materials",
+        "Appliances",
+        "Structural",
+        "Other"
+      ]
+    },
+    "condition": {
+      "type": "string",
+      "title": "Condition",
+      "enum": [
+        "Excellent",
+        "Good",
+        "Fair",
+        "Poor",
+        "Damaged",
+        "Condemned"
+      ]
+    },
+    "location": {
+      "type": "string",
+      "title": "Location/Room"
+    },
+    "school_id": {
+      "type": "string",
+      "title": "School"
+    },
+    "school_name": {
+      "type": "string",
+      "title": "School Name"
+    },
+    "serial_number": {
+      "type": "string",
+      "title": "Serial Number"
+    },
+    "purchase_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Purchase Date"
+    },
+    "purchase_value": {
+      "type": "number",
+      "title": "Purchase Value (PHP)"
+    },
+    "photo_url": {
+      "type": "string",
+      "title": "Asset Photo"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description"
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "Active",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "asset_code",
+    "category"
+  ]
+}

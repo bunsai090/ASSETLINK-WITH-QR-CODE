@@ -1,0 +1,96 @@
+{
+  "name": "MaintenanceTask",
+  "type": "object",
+  "properties": {
+    "repair_request_id": {
+      "type": "string",
+      "title": "Repair Request ID"
+    },
+    "request_number": {
+      "type": "string",
+      "title": "Request Number"
+    },
+    "asset_name": {
+      "type": "string",
+      "title": "Asset Name"
+    },
+    "school_name": {
+      "type": "string",
+      "title": "School Name"
+    },
+    "assigned_to_email": {
+      "type": "string",
+      "title": "Assigned Staff Email"
+    },
+    "assigned_to_name": {
+      "type": "string",
+      "title": "Assigned Staff Name"
+    },
+    "status": {
+      "type": "string",
+      "title": "Task Status",
+      "enum": [
+        "Assigned",
+        "In Progress",
+        "On Hold",
+        "Completed",
+        "Pending Teacher Verification"
+      ],
+      "default": "Assigned"
+    },
+    "teacher_confirmation": {
+      "type": "boolean",
+      "title": "Teacher Confirmed Completion",
+      "default": false
+    },
+    "teacher_verification_notes": {
+      "type": "string",
+      "title": "Teacher Verification Notes (if rejected)"
+    },
+    "verified_by_email": {
+      "type": "string",
+      "title": "Verified By (Teacher Email)"
+    },
+    "verified_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Verification Date"
+    },
+    "priority": {
+      "type": "string",
+      "title": "Priority",
+      "enum": [
+        "Low",
+        "Medium",
+        "High",
+        "Critical"
+      ]
+    },
+    "notes": {
+      "type": "string",
+      "title": "Work Notes"
+    },
+    "materials_used": {
+      "type": "string",
+      "title": "Materials Used"
+    },
+    "actual_cost": {
+      "type": "number",
+      "title": "Actual Cost (PHP)"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Start Date"
+    },
+    "completed_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Completion Date"
+    }
+  },
+  "required": [
+    "repair_request_id",
+    "asset_name"
+  ]
+}
