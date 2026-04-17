@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/lib/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import { AlertTriangle, TrendingUp, ShieldAlert, MapPin, Clock, CalendarDays } from 'lucide-react';
@@ -22,18 +23,22 @@ export default function SupervisorOversight() {
     const [filterSchool, setFilterSchool] = useState('all');
 
     useEffect(() => {
-        async function load() {
-            const [r, s, t] = await Promise.all([
-                base44.entities.RepairRequest.list('-created_date', 1000),
-                base44.entities.School.list('-created_date', 100),
-                base44.entities.MaintenanceTask.list('-created_date', 1000),
-            ]);
-            setRequests(r || []);
-            setSchools(s || []);
-            setTasks(t || []);
-            setLoading(false);
-        }
-        load();
+        const unsubRequests = onSnapshot(
+            query(collection(db, 'repair_requests'), orderBy('created_at', 'desc')),
+            (snap) => setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        );
+        const unsubTasks = onSnapshot(
+            query(collection(db, 'maintenance_tasks'), orderBy('created_at', 'desc')),
+            (snap) => setTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        );
+        const unsubSchools = onSnapshot(
+            collection(db, 'schools'),
+            (snap) => {
+                setSchools(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                setLoading(false);
+            }
+        );
+        return () => { unsubRequests(); unsubTasks(); unsubSchools(); };
     }, []);
 
     // Filter by school if selected
@@ -87,8 +92,8 @@ export default function SupervisorOversight() {
         const dateStr = format(d, 'yyyy-MM-dd');
         return {
             date: format(d, 'MMM d'),
-            new: filtered.filter(r => r.created_date?.startsWith(dateStr)).length,
-            completed: filtered.filter(r => r.completed_date?.startsWith(dateStr)).length,
+            new: filtered.filter(r => r.created_at?.toDate && format(r.created_at.toDate(), 'yyyy-MM-dd') === dateStr).length,
+            completed: filtered.filter(r => r.completed_at?.toDate && format(r.completed_at.toDate(), 'yyyy-MM-dd') === dateStr).length,
         };
     });
 
@@ -96,10 +101,10 @@ export default function SupervisorOversight() {
         total: filtered.length,
         escalated: escalatedRequests.length,
         avgResolutionTime: (() => {
-            const completed = filtered.filter(r => r.status === 'Completed' && r.created_date && r.completed_date);
+            const completed = filtered.filter(r => r.status === 'Completed' && r.created_at?.toDate && r.completed_at?.toDate);
             if (!completed.length) return 0;
             const avg = completed.reduce((sum, r) => {
-                const diff = new Date(r.completed_date).getTime() - new Date(r.created_date).getTime();
+                const diff = r.completed_at.toDate().getTime() - r.created_at.toDate().getTime();
                 return sum + diff / (1000 * 60 * 60 * 24);
             }, 0) / completed.length;
             return Math.round(avg);

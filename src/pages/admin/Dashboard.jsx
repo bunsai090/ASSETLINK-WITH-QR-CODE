@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/lib/AuthContext';
 import StatsCard from '../../components/StatsCard';
 import StatusBadge from '../../components/StatusBadge';
@@ -14,13 +15,17 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        async function load() {
-            const r = await base44.entities.RepairRequest.list('-created_date', 200);
-            setRequests(r);
+        if (!currentUser) return;
+
+        const q = query(collection(db, 'repair_requests'), orderBy('created_at', 'desc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setRequests(list);
             setLoading(false);
-        }
-        load();
-    }, []);
+        });
+
+        return () => unsubscribe();
+    }, [currentUser]);
 
     if (loading) {
         return (
@@ -81,7 +86,7 @@ export default function AdminDashboard() {
                                 </div>
                                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                     <StatusBadge status={req.priority} />
-                                    <span className="text-xs text-muted-foreground">{req.created_date ? format(new Date(req.created_date), 'MMM d') : ''}</span>
+                                    <span className="text-xs text-muted-foreground">{req.created_at ? format(req.created_at.toDate(), 'MMM d') : ''}</span>
                                 </div>
                             </div>
                         </Link>

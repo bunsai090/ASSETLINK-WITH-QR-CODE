@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sileo } from 'sileo';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'teacher', 'principal', 'maintenance', 'supervisor'] },
@@ -15,13 +17,12 @@ const navItems = [
     { path: '/report-damage', label: 'Report Damage', icon: AlertTriangle, roles: ['admin', 'teacher'] },
     { path: '/tasks', label: 'My Tasks', icon: Wrench, roles: ['admin', 'maintenance'] },
     { path: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin', 'principal', 'supervisor'] },
-    { path: '/schools', label: 'Schools', icon: School, roles: ['admin', 'supervisor'] },
     { path: '/calendar', label: 'Calendar', icon: CalendarDays, roles: ['admin', 'maintenance', 'principal', 'supervisor'] },
-    { path: '/supervisor-oversight', label: 'Oversight', icon: ShieldAlert, roles: ['admin', 'supervisor'] },
 ];
 
 export default function Layout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [logoutModalOpen, setLogoutModalOpen] = useState(false);
     const location = useLocation();
     const { currentUser, logout } = useAuth();
     const role = currentUser?.role || 'teacher';
@@ -29,18 +30,16 @@ export default function Layout() {
     const visibleItems = navItems.filter(item => item.roles.includes(role));
 
     const handleLogout = () => {
+        setLogoutModalOpen(false);
+        logout();
         sileo.success({
             title: 'Logged Out Successfully',
             description: 'You have been safely logged out. See you again soon!'
         });
-        // Delay logout slightly to let the toast be seen
-        setTimeout(() => {
-            logout();
-        }, 1000);
     };
 
     return (
-        <div className="min-h-screen bg-background flex">
+        <div className="h-screen bg-background flex overflow-hidden">
             {/* Mobile overlay */}
             {sidebarOpen && (
                 <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -48,7 +47,7 @@ export default function Layout() {
 
             {/* Sidebar */}
             <aside className={cn(
-                "fixed top-0 left-0 h-full w-64 bg-sidebar z-50 transform transition-transform duration-300 lg:translate-x-0 lg:static lg:z-auto",
+                "fixed top-0 left-0 h-screen w-64 bg-sidebar z-50 transform transition-transform duration-300 lg:translate-x-0 lg:relative lg:z-auto lg:flex-shrink-0",
                 sidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}>
                 <div className="flex flex-col h-full">
@@ -66,15 +65,8 @@ export default function Layout() {
                         </button>
                     </div>
 
-                    {/* Role badge */}
-                    <div className="px-6 py-3">
-                        <span className="text-xs font-semibold uppercase tracking-widest text-teal px-2 py-1 bg-teal/10 rounded-full">
-                            {role}
-                        </span>
-                    </div>
-
                     {/* Nav */}
-                    <nav className="flex-1 px-3 py-2 space-y-1">
+                    <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
                         {visibleItems.map(({ path, label, icon: Icon }) => {
                             const active = location.pathname === path;
                             return (
@@ -98,20 +90,23 @@ export default function Layout() {
                     </nav>
 
                     {/* User */}
-                    <div className="px-3 py-4 border-t border-sidebar-border">
+                    <div className="mt-auto px-3 py-4 border-t border-sidebar-border">
                         <div className="flex items-center gap-3 px-3 py-2">
-                            <div className="w-8 h-8 rounded-full bg-teal/20 flex items-center justify-center">
+                            <div className="w-8 h-8 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0">
                                 <span className="text-xs font-bold text-teal">
                                     {currentUser?.full_name?.[0] || currentUser?.email?.[0] || 'U'}
                                 </span>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-sidebar-foreground truncate">{currentUser?.full_name || 'User'}</p>
-                                <p className="text-xs text-sidebar-foreground/50 truncate">{currentUser?.email}</p>
-                            </div>
+                                <div className="flex flex-col min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="text-sm font-bold text-sidebar-foreground leading-tight">{currentUser?.full_name || 'User'}</p>
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-teal bg-teal/10 px-1.5 py-0.5 rounded-full flex-shrink-0">{role}</span>
+                                    </div>
+                                    <p className="text-[10px] text-sidebar-foreground/50 break-all mt-0.5">{currentUser?.email}</p>
+                                </div>
                             <button
-                                onClick={handleLogout}
-                                className="text-sidebar-foreground/40 hover:text-destructive transition-colors"
+                                onClick={() => setLogoutModalOpen(true)}
+                                className="text-sidebar-foreground/40 hover:text-destructive transition-colors flex-shrink-0"
                             >
                                 <LogOut className="w-4 h-4" />
                             </button>
@@ -121,23 +116,41 @@ export default function Layout() {
             </aside>
 
             {/* Main content */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
                 {/* Top bar */}
-                <header className="h-16 bg-card border-b border-border flex items-center px-4 lg:px-8 gap-4 sticky top-0 z-30">
+                <header className="h-20 bg-card/50 backdrop-blur-md border-b border-border flex items-center px-4 lg:px-8 gap-4 sticky top-0 z-30">
                     <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-foreground/60 hover:text-foreground">
                         <Menu className="w-5 h-5" />
                     </button>
                     <div className="flex-1" />
-                    <button className="relative text-foreground/60 hover:text-foreground transition-colors">
-                        <Bell className="w-5 h-5" />
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-teal rounded-full" />
-                    </button>
+                    {/* Bell icon removed per user request */}
                 </header>
-
                 <main className="flex-1 p-4 lg:p-8">
                     <Outlet />
                 </main>
             </div>
+
+            {/* Logout Confirmation Modal */}
+            <Dialog open={logoutModalOpen} onOpenChange={setLogoutModalOpen}>
+                <DialogContent className="sm:max-w-md rounded-2xl border-none">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold tracking-tight">Confirm Logout</DialogTitle>
+                    </DialogHeader>
+                    <div className="pt-2 pb-4">
+                        <p className="text-sm text-muted-foreground">
+                            Are you sure you want to sign out of your account? You will need to log in again to access the system.
+                        </p>
+                    </div>
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={() => setLogoutModalOpen(false)} className="flex-1 font-bold h-11 rounded-xl">
+                            Cancel
+                        </Button>
+                        <Button onClick={handleLogout} variant="destructive" className="flex-1 font-bold h-11 rounded-xl bg-red-500 hover:bg-red-600">
+                            Yes, Log me out
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

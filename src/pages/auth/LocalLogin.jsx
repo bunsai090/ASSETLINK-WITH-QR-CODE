@@ -2,46 +2,49 @@ import React, { useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { DEMO_USERS } from '@/api/seedData';
-import { Shield, Smartphone, Globe, Laptop } from 'lucide-react';
+import { Shield, Smartphone, Globe, Laptop, Eye, EyeOff } from 'lucide-react';
+import { useNavigate, Link } from "react-router-dom";
 import { sileo } from "sileo";
+import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function LocalLogin() {
-    const { checkAppState } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
 
         try {
-            // For now, we simulate finding the user in our demo data
-            const user = DEMO_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+            // FIREBASE AUTHENTICATION
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
             
-            if (user) {
-                // Mock password check (accept anything for demo users)
-                localStorage.setItem('assetlink_mock_current_user', JSON.stringify(user));
-                sileo.success({
-                    title: 'Login Successful',
-                    description: `Welcome back, ${user.full_name}! Redirecting you to your dashboard...`
-                });
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            } else {
-                sileo.error({
-                    title: 'Login Failed',
-                    description: 'The email address you entered wasn’t connected to an account. Please try again.'
-                });
-                setIsLoading(false);
+            sileo.success({
+                title: 'Login Successful',
+                description: `Welcome back! Redirecting you to your dashboard...`
+            });
+            
+            // Note: window.location.reload() or navigation is handled by AuthContext state change
+        } catch (error) {
+            let errorMsg = 'Invalid email or password. Please try again.';
+            
+            // Handle specific Firebase errors
+            if (error.code === 'auth/user-not-found') {
+                errorMsg = 'This email is not registered in our system.';
+            } else if (error.code === 'auth/wrong-password') {
+                errorMsg = 'Incorrect password. Please try again.';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMsg = 'Please enter a valid email address.';
             }
-        } catch (err) {
+
             sileo.error({
-                title: 'System Error',
-                description: 'We encountered an unexpected problem. Please try refreshing the page.'
+                title: 'Login Failed',
+                description: errorMsg
             });
             setIsLoading(false);
         }
@@ -63,7 +66,6 @@ export default function LocalLogin() {
                         AssetLink helps you manage school resources and track maintenance history with ease.
                     </p>
                     
-                    {/* Decorative Icons for "Premium" feel */}
                     <div className="hidden lg:flex gap-6 pt-6 opacity-40">
                         <Globe className="w-8 h-8" />
                         <Laptop className="w-8 h-8" />
@@ -86,15 +88,24 @@ export default function LocalLogin() {
                                     required
                                     disabled={isLoading}
                                 />
-                                <Input 
-                                    type="password" 
-                                    placeholder="Password"
-                                    className="h-[52px] text-base px-4 border-[#dddfe2] focus-visible:ring-[#008080] focus-visible:border-[#008080]"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    disabled={isLoading}
-                                />
+                                <div className="relative">
+                                    <Input 
+                                        type={showPassword ? "text" : "password"} 
+                                        placeholder="Password"
+                                        className="h-[52px] text-base px-4 border-[#dddfe2] focus-visible:ring-[#008080] focus-visible:border-[#008080]"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        disabled={isLoading}
+                                    />
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                    </button>
+                                </div>
                             </div>
 
                             <Button 
@@ -102,40 +113,38 @@ export default function LocalLogin() {
                                 className="w-full h-[48px] bg-[#008080] hover:bg-[#006666] text-white text-xl font-bold rounded-md transition-colors"
                                 disabled={isLoading}
                             >
-                                {isLoading ? 'Logging in...' : 'Log In'}
+                                {isLoading ? 'Authenticating...' : 'Log In'}
                             </Button>
 
                             <div className="text-center pt-2">
                                 <a href="#" className="text-sm text-[#008080] hover:underline">Forgot password?</a>
                             </div>
 
+                            <div className="border-t border-slate-200 pt-6 mt-2 text-center">
+                                <Button 
+                                    type="button"
+                                    onClick={() => navigate('/register')}
+                                    className="h-[48px] bg-[#42b72a] hover:bg-[#36a420] text-white text-lg font-bold px-4 rounded-md transition-colors"
+                                >
+                                    Create New Account
+                                </Button>
+                            </div>
+
                         </form>
                     </div>
                     
                     <p className="mt-7 text-center text-sm text-slate-600">
-                        <span className="font-bold hover:underline cursor-pointer">Create a Page</span> for a school, maintenance team or supervisor.
+                        <Link to="/register" className="font-bold hover:underline cursor-pointer">Create a Page</Link> for a school, maintenance team or supervisor.
                     </p>
                 </div>
             </div>
 
-            {/* Language Footer (Facebook style) */}
+            {/* Language Footer */}
             <div className="w-full max-w-[980px] mt-24 pt-8 border-t border-slate-300 text-xs text-slate-500 space-y-3 hidden sm:block">
                 <div className="flex flex-wrap gap-3">
                     <span className="cursor-pointer hover:underline">English (US)</span>
                     <span className="cursor-pointer hover:underline text-[#008080]">Filipino</span>
                     <span className="cursor-pointer hover:underline">Bisaya</span>
-                    <span className="cursor-pointer hover:underline">Español</span>
-                    <span className="cursor-pointer hover:underline">日本語</span>
-                    <span className="cursor-pointer hover:underline">한국어</span>
-                    <span className="cursor-pointer hover:underline">中文(简体)</span>
-                </div>
-                <div className="flex flex-wrap gap-4">
-                    <span className="cursor-pointer hover:underline">Sign Up</span>
-                    <span className="cursor-pointer hover:underline">Log In</span>
-                    <span className="cursor-pointer hover:underline">Messenger</span>
-                    <span className="cursor-pointer hover:underline">AssetLink Lite</span>
-                    <span className="cursor-pointer hover:underline">Marketplace</span>
-                    <span className="cursor-pointer hover:underline">Meta Pay</span>
                 </div>
                 <div>
                    AssetLink © 2026

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import StatusBadge from '../../components/StatusBadge';
 import { ChevronLeft, ChevronRight, CalendarDays, Wrench, AlertTriangle, Clock, Lock } from 'lucide-react';
@@ -47,31 +48,39 @@ export default function MaintenanceCalendar() {
     const [rescheduleReason, setRescheduleReason] = useState('');
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => { loadTasks(); }, []);
+    useEffect(() => { 
+        if (!currentUser?.full_name) return;
+        
+        const tasksQuery = query(
+            collection(db, 'maintenance_tasks'),
+            where('assigned_to_name', '==', currentUser.full_name)
+        );
 
-    async function loadTasks() {
-        const data = await base44.entities.MaintenanceTask.list('-created_date', 300);
-        setTasks(data);
-        distribute(data);
-        setLoading(false);
-    }
+        const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setTasks(data);
+            distribute(data);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [currentUser, weekStart]); // Added weekStart to ensure distribution updates when browsing weeks
+
+    const loadTasks = () => {};
 
     function distribute(data) {
         const days = {};
         const unsched = [];
         for (let i = 0; i < 7; i++) {
-            const key = format(addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), i), 'yyyy-MM-dd');
+            const key = format(addDays(weekStart, i), 'yyyy-MM-dd');
             days[key] = [];
         }
         data.forEach(task => {
-            if (task.start_date && days[task.start_date] !== undefined) {
-                days[task.start_date].push(task);
-            } else if (!task.start_date || task.status === 'Assigned') {
+            const dateKey = task.scheduled_start_date;
+            if (dateKey && days[dateKey] !== undefined) {
+                days[dateKey].push(task);
+            } else if (!dateKey || task.status === 'Assigned') {
                 unsched.push(task);
-            } else {
-                // Task scheduled outside current week, still include in its day bucket
-                if (!days[task.start_date]) days[task.start_date] = [];
-                days[task.start_date].push(task);
             }
         });
         setTasksByDay(days);
@@ -119,48 +128,22 @@ export default function MaintenanceCalendar() {
 
     async function performUpdate(taskId, destDate, reason = '') {
         setSaving(true);
-        // Optimistic update
-        const allTasks = [...tasks];
-        const taskIdx = allTasks.findIndex(t => t.id === taskId);
-        if (taskIdx === -1) return;
-        
-        const oldTask = allTasks[taskIdx];
-        const updatedTask = { 
-            ...oldTask, 
-            start_date: destDate || null,
-            reschedule_notes: reason ? (oldTask.reschedule_notes ? oldTask.reschedule_notes + '\n' : '') + reason : oldTask.reschedule_notes,
-            reschedule_count: reason ? (oldTask.reschedule_count || 0) + 1 : (oldTask.reschedule_count || 0)
-        };
-        
-        allTasks[taskIdx] = updatedTask;
-        setTasks(allTasks);
-        distribute(allTasks);
-
         try {
             const updatePayload = { 
-                start_date: destDate || null 
+                scheduled_start_date: destDate || null,
+                updated_at: serverTimestamp()
             };
             
             if (reason) {
-                updatePayload.reschedule_notes = updatedTask.reschedule_notes;
-                updatePayload.reschedule_count = updatedTask.reschedule_count;
-                
-                // NOTIFY PRINCIPAL
-                const repairReq = await base44.entities.RepairRequest.get(updatedTask.repair_request_id);
-                if (repairReq?.reported_by_email) {
-                    await base44.integrations.Core.SendEmail({
-                        to: repairReq.reported_by_email,
-                        subject: `📅 Task Rescheduled Past SLA — ${updatedTask.asset_name}`,
-                        body: `Dear Principal,\n\nThe maintenance task for "${updatedTask.asset_name}" has been rescheduled past the initial SLA deadline.\n\n🛠️ Task: ${updatedTask.asset_name}\n🏫 School: ${updatedTask.school_name}\n📅 New Schedule: ${format(parseISO(destDate), 'PPPP')}\n⚠️ Deadline was: ${format(parseISO(updatedTask.sla_deadline), 'PPPP')}\n\n📝 Reason Provided:\n"${reason}"\n\nReschedule Count: ${updatedTask.reschedule_count}\n\n— AssetLink Monitoring`,
-                    });
-                }
+                const task = tasks.find(t => t.id === taskId);
+                updatePayload.reschedule_notes = (task?.reschedule_notes ? task.reschedule_notes + '\n' : '') + reason;
+                updatePayload.reschedule_count = (task?.reschedule_count || 0) + 1;
             }
 
-            await base44.entities.MaintenanceTask.update(taskId, updatePayload);
+            await updateDoc(doc(db, 'maintenance_tasks', taskId), updatePayload);
             toast.success(destDate ? `Task scheduled for ${format(parseISO(destDate), 'EEE, MMM d')}` : 'Task moved to unscheduled');
         } catch (err) {
             toast.error('Failed to update task');
-            loadTasks(); // Rollback
         } finally {
             setSaving(false);
             setPendingReschedule(null);
@@ -170,7 +153,7 @@ export default function MaintenanceCalendar() {
     const today = startOfDay(new Date());
 
     const overdueTasks = tasks.filter(t =>
-        t.start_date && isBefore(parseISO(t.start_date), today) && !['Completed'].includes(t.status)
+        t.scheduled_start_date && isBefore(parseISO(t.scheduled_start_date), today) && !['Completed'].includes(t.status)
     );
 
     if (loading) {
@@ -194,12 +177,12 @@ export default function MaintenanceCalendar() {
                     <p className="text-muted-foreground text-sm mt-1">{canEdit ? 'Drag tasks between days to reschedule. Color indicates workload.' : 'View the maintenance schedule and workload.'}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={() => setWeekStart(w => subWeeks(w, 1))}><ChevronLeft className="w-4 h-4" /></Button>
+                    <Button variant="outline" size="icon" onClick={() => { const next = subWeeks(weekStart, 1); setWeekStart(next); distribute(tasks); }}><ChevronLeft className="w-4 h-4" /></Button>
                     <div className="text-sm font-medium text-foreground px-2 min-w-[160px] text-center">
                         {format(weekStart, 'MMM d')} — {format(addDays(weekStart, 6), 'MMM d, yyyy')}
                     </div>
-                    <Button variant="outline" size="icon" onClick={() => setWeekStart(w => addWeeks(w, 1))}><ChevronRight className="w-4 h-4" /></Button>
-                    <Button variant="outline" size="sm" onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))} className="text-teal border-teal/30 hover:bg-teal/5">Today</Button>
+                    <Button variant="outline" size="icon" onClick={() => { const next = addWeeks(weekStart, 1); setWeekStart(next); distribute(tasks); }}><ChevronRight className="w-4 h-4" /></Button>
+                    <Button variant="outline" size="sm" onClick={() => { const next = startOfWeek(new Date(), { weekStartsOn: 1 }); setWeekStart(next); distribute(tasks); }} className="text-teal border-teal/30 hover:bg-teal/5">Today</Button>
                 </div>
             </div>
 

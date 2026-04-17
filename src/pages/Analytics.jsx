@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import { TrendingUp, Download, BarChart3, PieChart as PieIcon, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,18 +16,35 @@ export default function Analytics() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        async function load() {
-            const [r, a, t] = await Promise.all([
-                base44.entities.RepairRequest.list('-created_date', 500),
-                base44.entities.Asset.list('-created_date', 500),
-                base44.entities.MaintenanceTask.list('-created_date', 500),
-            ]);
-            setRequests(r);
-            setAssets(a);
-            setTasks(t);
+        setLoading(true);
+        
+        // Listen to Repair Requests
+        const unsubRequests = onSnapshot(collection(db, 'repair_requests'), (snap) => {
+            const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setRequests(list);
+        }, (err) => console.error("Repair Requests Error:", err));
+
+        // Listen to Assets
+        const unsubAssets = onSnapshot(collection(db, 'assets'), (snap) => {
+            const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAssets(list);
+        }, (err) => console.error("Assets Error:", err));
+
+        // Listen to Maintenance Tasks
+        const unsubTasks = onSnapshot(collection(db, 'maintenance_tasks'), (snap) => {
+            const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setTasks(list);
             setLoading(false);
-        }
-        load();
+        }, (err) => {
+            console.error("Maintenance Tasks Error:", err);
+            setLoading(false);
+        });
+
+        return () => {
+            unsubRequests();
+            unsubAssets();
+            unsubTasks();
+        };
     }, []);
 
     // Status distribution
@@ -54,16 +72,16 @@ export default function Analytics() {
         const dateStr = format(d, 'yyyy-MM-dd');
         return {
             date: format(d, 'MMM d'),
-            requests: requests.filter(r => r.created_date?.startsWith(dateStr)).length,
-            completed: requests.filter(r => r.completed_date?.startsWith(dateStr)).length,
+            requests: requests.filter(r => r.created_at?.toDate && format(r.created_at.toDate(), 'yyyy-MM-dd') === dateStr).length,
+            completed: requests.filter(r => r.completed_at?.toDate && format(r.completed_at.toDate(), 'yyyy-MM-dd') === dateStr).length,
         };
     });
 
     const avgResolutionTime = (() => {
-        const completed = requests.filter(r => r.status === 'Completed' && r.created_date && r.completed_date);
+        const completed = requests.filter(r => r.status === 'Completed' && r.created_at?.toDate && r.completed_at?.toDate);
         if (!completed.length) return 0;
         const avg = completed.reduce((sum, r) => {
-            const diff = new Date(r.completed_date).getTime() - new Date(r.created_date).getTime();
+            const diff = r.completed_at.toDate().getTime() - r.created_at.toDate().getTime();
             return sum + diff / (1000 * 60 * 60 * 24);
         }, 0) / completed.length;
         return Math.round(avg);

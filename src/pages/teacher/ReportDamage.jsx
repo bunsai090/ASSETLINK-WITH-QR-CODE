@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { Camera, Upload, Search, AlertTriangle, CheckCircle, QrCode, X, Package, Shield } from 'lucide-react';
+import { Camera, Upload, Search, AlertTriangle, CheckCircle, QrCode, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { sileo } from 'sileo';
 import { useNavigate } from 'react-router-dom';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function ReportDamage() {
     const { currentUser } = useAuth();
@@ -26,7 +26,12 @@ export default function ReportDamage() {
     const fileRef = useRef(null);
 
     useEffect(() => {
-        base44.entities.Asset.list('-created_date', 200).then(setAssets);
+        const assetsQuery = query(collection(db, 'assets'), orderBy('name', 'asc'));
+        const unsubscribe = onSnapshot(assetsQuery, (snapshot) => {
+            const assetsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAssets(assetsList);
+        });
+        return () => unsubscribe();
     }, []);
 
     const filteredAssets = assets.filter(a =>
@@ -49,39 +54,26 @@ export default function ReportDamage() {
             return; 
         }
         setSubmitting(true);
-        let photo_url = null;
         try {
-            if (photo) {
-                const { file_url } = await base44.integrations.Core.UploadFile({ file: photo });
-                photo_url = file_url;
-            }
             const reqNum = `RR-${Date.now().toString().slice(-6)}`;
-            await base44.entities.RepairRequest.create({
+            
+            await addDoc(collection(db, 'repair_requests'), {
                 request_number: reqNum,
                 asset_id: selectedAsset.id,
                 asset_name: selectedAsset.name,
                 asset_code: selectedAsset.asset_code,
-                school_name: selectedAsset.school_name,
-                reported_by_email: currentUser?.email,
-                reported_by_name: currentUser?.full_name,
+                school_name: selectedAsset.school_name || '',
+                school_id: selectedAsset.school_id || '',
+                reported_by_email: currentUser?.email?.toLowerCase(),
+                reported_by_name: currentUser?.full_name || 'Teacher',
                 description: form.description,
                 priority: form.priority,
-                photo_url,
+                photo_url: null, 
                 status: 'Pending',
+                created_at: serverTimestamp(),
+                updated_at: serverTimestamp()
             });
 
-            // Send critical alert email to principal
-            if (form.priority === 'Critical' && selectedAsset.school_id) {
-                const schools = await base44.entities.School.list('-created_date', 100);
-                const school = schools.find(s => s.id === selectedAsset.school_id || s.name === selectedAsset.school_name);
-                if (school?.contact_email) {
-                    await base44.integrations.Core.SendEmail({
-                        to: school.contact_email,
-                        subject: `🚨 CRITICAL Damage Report — ${selectedAsset.name} (${selectedAsset.asset_code})`,
-                        body: `Dear ${school.principal_name || 'Principal'},\n\nA CRITICAL damage report has been filed that requires your immediate attention.\n\n📋 Request #: ${reqNum}\n🏫 School: ${selectedAsset.school_name}\n🔧 Asset: ${selectedAsset.name} (${selectedAsset.asset_code})\n📍 Location: ${selectedAsset.location || 'Not specified'}\n👤 Reported by: ${currentUser?.full_name} (${currentUser?.email})\n\n📝 Damage Description:\n${form.description}\n\nPlease log in to AssetLink to review and approve this request as soon as possible.\n\n— AssetLink Notification System`,
-                    });
-                }
-            }
             sileo.success({
                 title: 'Report Submitted',
                 description: 'Your damage report has been successfully recorded and sent for review.'
@@ -90,7 +82,7 @@ export default function ReportDamage() {
         } catch (err) {
             sileo.error({
                 title: 'Submission Failed',
-                description: 'We could not record your damage report. Please check your connection and try again.'
+                description: 'We could not record your damage report. Please try again.'
             });
             console.error(err);
         } finally {
@@ -196,30 +188,7 @@ export default function ReportDamage() {
                                             onChange={e => setAssetSearch(e.target.value)} 
                                         />
                                     </div>
-                                    <Button 
-                                        variant="outline" 
-                                        onClick={() => setShowQR(!showQR)} 
-                                        className={`gap-2 flex-shrink-0 transition-colors ${showQR ? 'bg-teal/10 border-teal/30 text-teal shadow-sm' : ''}`}
-                                    >
-                                        <QrCode className="w-4 h-4" /> <span>QR Scan</span>
-                                    </Button>
                                 </div>
-
-                                {showQR && (
-                                    <div className="bg-slate-50 rounded-xl p-5 text-center space-y-4 border-2 border-dashed border-slate-200 animate-in zoom-in-95 duration-200">
-                                        <div className="w-32 h-32 mx-auto bg-white rounded-2xl border-2 border-dashed border-slate-300 flex items-center justify-center relative overflow-hidden group">
-                                            <QrCode className="w-12 h-12 text-slate-300 transition-transform group-hover:scale-110" />
-                                            <div className="absolute inset-x-0 top-0 h-0.5 bg-teal/50 animate-bounce mt-4 shadow-[0_0_10px_rgba(13,148,136,0.5)]" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-semibold text-slate-900 uppercase tracking-tight">QR Code Scanner</p>
-                                            <p className="text-[11px] text-slate-500 leading-relaxed px-4">Align the asset's QR code with your camera to identify it automatically.</p>
-                                        </div>
-                                        <Button size="sm" variant="ghost" onClick={() => setShowQR(false)} className="text-xs text-slate-400 hover:text-red-500">
-                                            Cancel Scan
-                                        </Button>
-                                    </div>
-                                )}
 
                                 <div className="space-y-1.5 max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 pr-1">
                                     {filteredAssets.length === 0 ? (
@@ -285,7 +254,7 @@ export default function ReportDamage() {
                             </div>
                             <Textarea
                                 rows={5}
-                                placeholder="Describe the issue in detail... (e.g. Screen is flickering, missing key on keyboard, etc.)"
+                                placeholder="Describe the issue in detail..."
                                 className="resize-none rounded-xl border-slate-200 focus:border-teal ring-offset-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                                 value={form.description}
                                 onChange={e => setForm({ ...form, description: e.target.value })}
@@ -312,7 +281,7 @@ export default function ReportDamage() {
                             </div>
                             {form.priority === 'Critical' && (
                                 <p className="text-[10px] font-bold text-red-500 mt-2 flex items-center gap-1.5 animate-pulse">
-                                    <AlertTriangle className="w-3 h-3" /> Principal will be notified immediately via email.
+                                    <AlertTriangle className="w-3 h-3" /> Principal will be notified immediately.
                                 </p>
                             )}
                         </div>
@@ -325,23 +294,8 @@ export default function ReportDamage() {
                             disabled={submitting || !selectedAsset || !form.description} 
                             className="w-full h-14 bg-teal hover:bg-teal/90 text-white font-bold text-lg rounded-2xl shadow-lg shadow-teal/20 transition-all hover:scale-[1.01] active:scale-[0.98] disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
                         >
-                            {submitting ? (
-                                <div className="flex items-center gap-2">
-                                    <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                    Submitting...
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-2">
-                                    <CheckCircle className="w-5 h-5" /> 
-                                    Submit Damage Report
-                                </div>
-                            )}
+                            {submitting ? "Submitting..." : "Submit Damage Report"}
                         </Button>
-                        {!selectedAsset || !form.description ? (
-                            <p className="text-[11px] text-center text-slate-400 mt-4 mx-auto max-w-[280px]">
-                                Please select an asset and describe the damage before submitting.
-                            </p>
-                        ) : null}
                     </div>
                 </div>
             </div>

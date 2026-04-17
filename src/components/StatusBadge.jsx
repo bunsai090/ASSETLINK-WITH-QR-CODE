@@ -23,6 +23,7 @@ const statusConfig = {
     // Task
     Assigned: { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
     'On Hold': { bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500' },
+    'Pending Teacher Verification': { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
 };
 
 export default function StatusBadge({ status, size = 'sm' }) {
