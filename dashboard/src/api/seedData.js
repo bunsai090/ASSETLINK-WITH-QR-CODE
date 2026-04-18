@@ -5,13 +5,6 @@
 
 export const DEMO_USERS = [
     {
-        id: 'user_admin_001',
-        email: 'admin@assetlink.ph',
-        full_name: 'System Admin',
-        role: 'admin',
-        created_date: '2025-01-15T08:00:00Z',
-    },
-    {
         id: 'user_teacher_001',
         email: 'teacher@assetlink.ph',
         full_name: 'Juan Dela Cruz',
@@ -23,13 +16,6 @@ export const DEMO_USERS = [
         email: 'principal@assetlink.ph',
         full_name: 'Principal Maria',
         role: 'principal',
-        created_date: '2025-01-15T08:00:00Z',
-    },
-    {
-        id: 'user_supervisor_001',
-        email: 'supervisor@assetlink.ph',
-        full_name: 'Supervisor Roberto',
-        role: 'supervisor',
         created_date: '2025-01-15T08:00:00Z',
     },
     {

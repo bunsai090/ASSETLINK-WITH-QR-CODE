@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/lib/AuthContext';
 import StatusBadge from '../components/StatusBadge';
-import { Wrench, CheckCircle, Clock, AlertCircle, ChevronDown } from 'lucide-react';
+import { Wrench, CheckCircle, Clock, AlertCircle, ChevronDown, Package, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
+import { sileo } from 'sileo';
 import { format } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
-// BACKEND: Validate task status transitions server-side to prevent invalid state changes
 const TASK_STATUSES = ['Assigned', 'In Progress', 'On Hold', 'Completed', 'Pending Teacher Verification'];
 
 export default function Tasks() {
@@ -25,17 +27,18 @@ export default function Tasks() {
     const [saving, setSaving] = useState(false);
     const [filterStatus, setFilterStatus] = useState('all');
 
-    useEffect(() => { loadTasks(); }, []);
-
-    async function loadTasks() {
-        const data = await base44.entities.MaintenanceTask.list('-created_date', 200);
-        // If maintenance role, filter to own tasks
-        const filtered = role === 'maintenance'
-            ? data.filter(t => t.assigned_to_email === currentUser?.email || t.assigned_to_name?.toLowerCase().includes(currentUser?.full_name?.toLowerCase()))
-            : data;
-        setTasks(filtered);
-        setLoading(false);
-    }
+    useEffect(() => {
+        const q = query(collection(db, 'maintenance_tasks'), orderBy('updated_at', 'desc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const data = (/** @type {any[]} */ (snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))));
+            const filtered = role === 'maintenance'
+                ? data.filter(t => (t.assigned_to_email === currentUser?.email) || (t.assigned_to_name?.toLowerCase().includes(currentUser?.full_name?.toLowerCase())))
+                : data;
+            setTasks(filtered);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, [currentUser, role]);
 
     function openTask(task) {
         setSelected(task);
@@ -44,157 +47,211 @@ export default function Tasks() {
 
     async function handleUpdate() {
         setSaving(true);
-        const updateData = {
-            status: form.status,
-            notes: form.notes,
-            materials_used: form.materials_used,
-            actual_cost: form.actual_cost ? parseFloat(form.actual_cost) : null,
-        };
-        if (form.status === 'Completed') {
-            updateData.completed_date = new Date().toISOString().split('T')[0];
-            // BACKEND: When setting Completed, actually set to "Pending Teacher Verification"
-            // Teacher must verify repair is satisfactory before final closure
-            updateData.status = 'Pending Teacher Verification';
-        }
-        if (selected.repair_request_id) {
-            // Update repair request with maintenance notes
-            const repairUpdate = { maintenance_notes: form.notes };
-            // Keep repair request in "In Progress" state until teacher verifies
-            await base44.entities.RepairRequest.update(selected.repair_request_id, repairUpdate);
+        try {
+            const updateData = {
+                status: form.status,
+                notes: form.notes,
+                materials_used: form.materials_used,
+                actual_cost: form.actual_cost ? parseFloat(form.actual_cost) : null,
+                updated_at: serverTimestamp()
+            };
+            
+            if (form.status === 'Completed') {
+                updateData.completed_date = new Date().toISOString().split('T')[0];
+                updateData.status = 'Pending Teacher Verification';
+            }
 
-            // Notify the teacher who filed the request
-            const allRequests = await base44.entities.RepairRequest.list('-created_date', 500);
-            const repairReq = allRequests.find(r => r.id === selected.repair_request_id);
-            if (repairReq?.reported_by_email) {
-                await base44.integrations.Core.SendEmail({
-                    to: repairReq.reported_by_email,
-                    subject: `✅ Repair Ready for Verification — ${selected.asset_name}`,
-                    body: `Dear ${repairReq.reported_by_name || 'Teacher'},\n\nThe maintenance work on "${selected.asset_name}" has been COMPLETED and is ready for your verification.\n\n📋 Request #: ${selected.request_number || selected.repair_request_id}\n🏫 School: ${selected.school_name}\n🔧 Asset: ${selected.asset_name}${form.notes ? `\n\n📝 Maintenance Notes:\n${form.notes}` : ''}${form.materials_used ? `\n🛠 Materials Used: ${form.materials_used}` : ''}\n\nPlease inspect the asset and confirm whether the repair is satisfactory in AssetLink.\n\n— AssetLink Notification System`,
+            if (selected.repair_request_id) {
+                await updateDoc(doc(db, 'repair_requests', selected.repair_request_id), {
+                    status: updateData.status,
+                    maintenance_notes: form.notes,
+                    updated_at: serverTimestamp()
                 });
             }
+
+            await updateDoc(doc(db, 'maintenance_tasks', selected.id), updateData);
+            sileo.success({ title: 'Task Updated', description: 'Logistics data synchronized.' });
+            setSelected(null);
+        } catch (error) {
+            sileo.error({ title: 'Sync Failure', description: 'Could not update task record.' });
+        } finally {
+            setSaving(false);
         }
-        await base44.entities.MaintenanceTask.update(selected.id, updateData);
-        toast.success('Task updated. Awaiting teacher verification.');
-        setSaving(false);
-        setSelected(null);
-        loadTasks();
     }
 
     const displayed = filterStatus === 'all' ? tasks : tasks.filter(t => t.status === filterStatus);
     const counts = {
         Assigned: tasks.filter(t => t.status === 'Assigned').length,
         'In Progress': tasks.filter(t => t.status === 'In Progress').length,
-        Completed: tasks.filter(t => t.status === 'Completed').length,
+        Completed: tasks.filter(t => t.status === 'Completed' || t.status === 'Pending Teacher Verification').length,
     };
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold text-foreground">Maintenance Tasks</h1>
-                <p className="text-muted-foreground text-sm mt-1">View and update your assigned repair tasks</p>
+        <div className="space-y-10 animate-fade-in pb-20 relative z-10 font-sans">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div className="space-y-1.5 font-sans">
+                    <h1 className="text-4xl md:text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1]">
+                        Restoration <span className="text-primary italic">Tasks</span>
+                    </h1>
+                    <p className="text-muted-foreground text-lg max-w-2xl font-medium tracking-tight opacity-70">
+                        Managing {tasks.length} tactical service orders assigned to your personnel.
+                    </p>
+                </div>
             </div>
 
-            {/* Summary cards */}
-            <div className="grid grid-cols-3 gap-3">
+            {/* tactical Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
-                    { label: 'Assigned', count: counts.Assigned, icon: Clock, color: 'text-blue-600 bg-blue-100' },
-                    { label: 'In Progress', count: counts['In Progress'], icon: Wrench, color: 'text-amber-600 bg-amber-100' },
-                    { label: 'Completed', count: counts.Completed, icon: CheckCircle, color: 'text-emerald-600 bg-emerald-100' },
+                    { label: 'Assigned', count: counts.Assigned, icon: Clock, color: 'text-amber-600 bg-amber-50' },
+                    { label: 'In Operation', count: counts['In Progress'], icon: Wrench, color: 'text-blue-600 bg-blue-50' },
+                    { label: 'Fulfilled', count: counts.Completed, icon: CheckCircle, color: 'text-primary bg-primary/5' },
                 ].map(({ label, count, icon: Icon, color }) => (
-                    <div key={label} className="bg-card rounded-2xl border border-border p-4 text-center">
-                        <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center mx-auto mb-2`}>
-                            <Icon className="w-5 h-5" />
+                    <motion.div 
+                        whileHover={{ y: -4 }}
+                        key={label} 
+                        className="bg-white rounded-2xl border border-border p-8 flex items-center justify-between shadow-sm transition-all"
+                    >
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{label}</p>
+                            <p className="text-4xl font-serif font-black text-foreground">{count}</p>
                         </div>
-                        <p className="text-2xl font-bold text-foreground">{count}</p>
-                        <p className="text-xs text-muted-foreground">{label}</p>
-                    </div>
+                        <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border border-transparent shadow-sm", color)}>
+                            <Icon className="w-6 h-6" />
+                        </div>
+                    </motion.div>
                 ))}
             </div>
 
-            {/* Filter */}
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-48"><SelectValue placeholder="Filter by status" /></SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">All Tasks</SelectItem>
-                    {TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-            </Select>
+            {/* Filter Bar */}
+            <div className="bg-white p-2 rounded-2xl border border-border shadow-sm">
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-full h-12 bg-slate-50 border-none rounded-xl font-bold px-6 flex items-center justify-between transition-colors hover:bg-slate-100">
+                        <div className="flex items-center gap-3">
+                            <Shield className="w-4 h-4 text-primary" />
+                            <span className="text-[10px] uppercase tracking-widest text-foreground">Taxonomy: {filterStatus === 'all' ? 'Universal Registry' : filterStatus}</span>
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-border">
+                        <SelectItem value="all">Universal Registry</SelectItem>
+                        {TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
 
             {loading ? (
-                <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-teal/30 border-t-teal rounded-full animate-spin" /></div>
+                <div className="flex justify-center py-40">
+                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                </div>
             ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {displayed.length === 0 ? (
-                        <div className="text-center py-16 text-muted-foreground bg-card rounded-2xl border border-border">
-                            <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                            <p>No tasks {filterStatus !== 'all' ? `with status "${filterStatus}"` : 'assigned yet'}</p>
+                        <div className="col-span-full text-center py-40 bg-slate-50 rounded-2xl border border-dashed border-border flex flex-col items-center justify-center">
+                            <Wrench className="w-16 h-16 mb-4 text-muted-foreground opacity-20" />
+                            <h3 className="text-xl font-serif font-black text-foreground">Workshop Static</h3>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-1 text-muted-foreground opacity-60">Zero active service orders encountered</p>
                         </div>
-                    ) : displayed.map(task => (
-                        <div
+                    ) : displayed.map((task, idx) => (
+                        <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.02 }}
                             key={task.id}
                             onClick={() => openTask(task)}
-                            className="bg-card rounded-2xl border border-border p-4 hover:shadow-md transition-all cursor-pointer"
+                            className="group relative flex flex-col bg-white rounded-2xl p-8 transition-all duration-300 border border-transparent hover:border-border hover:bg-slate-50/50 cursor-pointer shadow-sm hover:shadow-md"
                         >
-                            <div className="flex items-start gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-teal/10 flex items-center justify-center flex-shrink-0">
-                                    <Wrench className="w-5 h-5 text-teal" />
+                            <div className="flex items-start justify-between mb-8">
+                                <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground group-hover:bg-white group-hover:text-primary transition-all duration-300 shadow-sm border border-transparent group-hover:border-border">
+                                    <Wrench className="w-7 h-7 group-hover:rotate-45 transition-transform" />
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                                        <h3 className="font-semibold text-foreground text-sm">{task.asset_name}</h3>
-                                        <StatusBadge status={task.priority || 'Medium'} />
-                                        <StatusBadge status={task.status} />
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">{task.school_name}</p>
-                                    {task.notes && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{task.notes}</p>}
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        {task.created_date ? format(new Date(task.created_date), 'MMM d, yyyy') : ''}
-                                    </p>
+                                <div className="flex flex-col items-end gap-2">
+                                    <StatusBadge status={task.priority || 'Medium'} size="sm" />
+                                    <StatusBadge status={task.status} size="sm" />
                                 </div>
                             </div>
-                        </div>
+                            <div className="space-y-3">
+                                <h3 className="text-2xl font-serif font-black text-foreground tracking-tight group-hover:text-primary transition-colors leading-tight">{task.asset_name}</h3>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-primary px-2.5 py-1 bg-primary/5 rounded-lg border border-primary/10 uppercase tracking-widest">{task.request_number || 'PENDING'}</span>
+                                    <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest truncate max-w-[200px] italic">• {task.school_name}</span>
+                                </div>
+                                {task.notes && (
+                                    <div className="mt-6 p-5 rounded-xl bg-slate-50 italic text-[11px] font-medium text-muted-foreground/70 leading-relaxed border border-border line-clamp-2">
+                                        "{task.notes}"
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex items-center justify-between mt-10 pt-6 border-t border-border">
+                                <div className="flex items-center gap-2 text-muted-foreground/40">
+                                    <Clock className="w-3.5 h-3.5" />
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em]">
+                                        {task.created_date ? format(new Date(task.created_date), 'MMM d, yyyy') : 'Recently Logged'}
+                                    </span>
+                                </div>
+                                <div className="text-[9px] font-black text-primary uppercase tracking-[0.3em] opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 transition-all duration-300 italic">
+                                    Execute Protocol →
+                                </div>
+                            </div>
+                        </motion.div>
                     ))}
                 </div>
             )}
 
             {/* Update Modal */}
             <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Update Task</DialogTitle>
-                    </DialogHeader>
+                <DialogContent className="sm:max-w-xl rounded-2xl border border-border p-0 overflow-hidden bg-white shadow-2xl font-sans">
+                    <div className="p-8 pb-6 border-b border-border bg-slate-50/50">
+                        <DialogTitle className="text-3xl font-serif font-black tracking-tight text-foreground">
+                            Execute <span className="text-primary italic">Sync</span>
+                        </DialogTitle>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mt-1">Operational status update</p>
+                    </div>
+
                     {selected && (
-                        <div className="space-y-4">
-                            <div>
-                                <p className="font-semibold text-foreground">{selected.asset_name}</p>
-                                <p className="text-sm text-muted-foreground">{selected.school_name}</p>
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label>Status</Label>
-                                <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        {TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label>Work Notes</Label>
-                                <Textarea rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Describe the work done..." />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1.5">
-                                    <Label>Materials Used</Label>
-                                    <Input value={form.materials_used} onChange={e => setForm({ ...form, materials_used: e.target.value })} placeholder="e.g. Nails, paint" />
+                        <div className="p-8 space-y-8">
+                            <div className="flex items-center gap-5 p-5 rounded-xl bg-slate-50 border border-border">
+                                <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/10 transition-transform hover:rotate-2">
+                                    <Package className="w-6 h-6" />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <Label>Actual Cost (PHP)</Label>
-                                    <Input type="number" value={form.actual_cost} onChange={e => setForm({ ...form, actual_cost: e.target.value })} placeholder="0.00" />
+                                <div>
+                                    <p className="text-lg font-serif font-black text-foreground leading-none">{selected.asset_name}</p>
+                                    <p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-widest mt-1.5">{selected.school_name || 'District Campus'}</p>
                                 </div>
                             </div>
-                            <Button onClick={handleUpdate} disabled={saving} className="w-full bg-teal hover:bg-teal/90 text-white">
-                                {saving ? 'Saving...' : 'Update Task'}
-                            </Button>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Lifecycle State</Label>
+                                    <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
+                                        <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-border font-bold text-xs uppercase tracking-widest px-5 hover:bg-slate-100 transition-colors"><SelectValue /></SelectTrigger>
+                                        <SelectContent className="rounded-xl border-border">
+                                            {TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Materials Logistics</Label>
+                                    <Input value={form.materials_used} onChange={e => setForm({ ...form, materials_used: e.target.value })} placeholder="Registry materials..." className="h-12 rounded-xl bg-slate-50 border-border font-bold placeholder:font-medium text-xs px-5 focus-visible:bg-white" />
+                                </div>
+                                <div className="md:col-span-2 space-y-2">
+                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Service Intelligence (Notes)</Label>
+                                    <Textarea rows={4} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Log specific tactical adjustments..." className="rounded-xl bg-slate-50 border-border font-bold p-5 text-xs placeholder:font-medium focus-visible:bg-white transition-all" />
+                                </div>
+                                <div className="md:col-span-2 space-y-2">
+                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Operational Cost (PHP)</Label>
+                                    <div className="relative">
+                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground font-black text-lg">₱</span>
+                                        <Input type="number" value={form.actual_cost} onChange={e => setForm({ ...form, actual_cost: e.target.value })} placeholder="0.00" className="h-14 rounded-xl bg-slate-50 border-border font-black text-xl pl-10 focus-visible:bg-white" />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="flex flex-col gap-3 pt-6">
+                                <Button onClick={handleUpdate} disabled={saving} className="h-14 bg-primary hover:bg-primary/95 text-primary-foreground font-black uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-primary/10 transition-all active:scale-[0.98] text-[10px]">
+                                    {saving ? 'Synchronizing Archive...' : (form.status === 'Completed' ? 'Fulfil & Verification Request' : 'Execute Update')}
+                                </Button>
+                                <Button variant="ghost" onClick={() => setSelected(null)} className="text-muted-foreground/50 hover:text-rose-600 font-bold uppercase text-[9px] tracking-[0.3em] transition-colors">Abort Process</Button>
+                            </div>
                         </div>
                     )}
                 </DialogContent>

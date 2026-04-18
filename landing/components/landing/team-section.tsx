@@ -11,39 +11,44 @@ type Member = {
 
 const TEAM: Member[] = [
   {
-    name: "Project Lead",
-    role: "Principal Researcher",
-    focus: "Stakeholder mapping, DepEd coordination, thesis defense owner.",
-    initials: "PL",
+    name: "Ladja, Alvar",
+    role: "Project Manager",
+    focus: "Stakeholder communication, timeline management, and system requirement mapping.",
+    initials: "AL",
     accent: "bg-primary/15 text-primary",
   },
   {
-    name: "UX Researcher",
-    role: "Field Research & Usability",
-    focus: "Teacher and principal interviews, SUS evaluation, interaction design.",
-    initials: "UX",
+    name: "Awalie, Naphier",
+    role: "Frontend Developer",
+    focus: "UI/UX logic, responsive design architecture, and frontend state management.",
+    initials: "NA",
     accent: "bg-accent/20 text-accent",
   },
   {
-    name: "Full-stack Developer",
-    role: "Engineering",
-    focus: "Next.js, Supabase RLS, QR pipeline, offline sync, role-based auth.",
-    initials: "FS",
+    name: "Saporno, John Christian",
+    role: "Backend Developer",
+    focus: "Firebase services, backend API integration, and database security rules.",
+    initials: "JC",
     accent: "bg-primary/10 text-primary",
   },
   {
-    name: "Documentation Lead",
-    role: "Research & Writing",
-    focus: "Literature review, manuscript chapters, MOOE policy alignment.",
-    initials: "DL",
+    name: "Adjarani, Jacob Reniel",
+    role: "System Debugger",
+    focus: "Technical troubleshooting, system audits, and performance bottleneck resolution.",
+    initials: "JR",
     accent: "bg-secondary text-foreground",
+  },
+  {
+    name: "Garcia, Ian Marc",
+    role: "Tester",
+    focus: "Quality assurance protocols, automated testing, and user feedback verification.",
+    initials: "IM",
+    accent: "bg-primary/15 text-primary",
   },
 ]
 
 const ADVISORS = [
-  "Thesis adviser — IT / SE department",
-  "Technical panel — software quality (ISO 25010)",
-  "External panel — DepEd Division representative",
+  "Raiza Beligolo — ITPE 104 Subject Teacher",
 ]
 
 export function TeamSection() {
@@ -56,7 +61,7 @@ export function TeamSection() {
               The research team
             </p>
             <h2 className="mt-3 font-serif text-3xl tracking-tight text-balance md:text-4xl">
-              Four researchers building one tool for thousands of classrooms.
+              Five students building one tool for thousands of classrooms.
             </h2>
             <p className="mt-4 text-pretty text-muted-foreground md:text-lg">
               A capstone team spanning software engineering, field research, and DepEd policy —
@@ -66,7 +71,7 @@ export function TeamSection() {
         </Reveal>
 
         <StaggerGroup
-          className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
           staggerChildren={0.1}
           delayChildren={0.1}
         >
@@ -99,17 +104,17 @@ export function TeamSection() {
         <Reveal delay={0.2}>
           <div className="mt-10 rounded-2xl border border-border bg-background p-6">
             <p className="text-xs font-medium tracking-wide text-primary uppercase">
-              Panel &amp; advisers
+              Subject Teacher
             </p>
-            <ul className="mt-4 grid gap-3 md:grid-cols-3">
+            <ul className="mt-4 flex flex-col items-start">
               {ADVISORS.map((a) => (
                 <li
                   key={a}
-                  className="flex items-start gap-2 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground"
+                  className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground shadow-sm"
                 >
-                  <span
+                  <div
                     aria-hidden="true"
-                    className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-primary"
+                    className="h-2 w-2 flex-none rounded-full bg-primary animate-pulse"
                   />
                   <span>{a}</span>
                 </li>
