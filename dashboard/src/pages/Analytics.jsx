@@ -6,6 +6,8 @@ import { TrendingUp, Download, BarChart3, PieChart as PieIcon, Activity } from '
 import { Button } from '@/components/ui/button';
 import StatsCard from '../components/StatsCard';
 import { format, subDays } from 'date-fns';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const COLORS = ['#0d9488', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#10b981'];
 
@@ -78,12 +80,12 @@ export default function Analytics() {
     });
 
     const avgResolutionTime = (() => {
-        const completed = requests.filter(r => r.status === 'Completed' && r.created_at?.toDate && r.completed_at?.toDate);
-        if (!completed.length) return 0;
-        const avg = completed.reduce((sum, r) => {
+        const completedRes = requests.filter(r => r.status === 'Completed' && r.created_at?.toDate && r.completed_at?.toDate);
+        if (!completedRes.length) return 0;
+        const avg = completedRes.reduce((sum, r) => {
             const diff = r.completed_at.toDate().getTime() - r.created_at.toDate().getTime();
             return sum + diff / (1000 * 60 * 60 * 24);
-        }, 0) / completed.length;
+        }, 0) / completedRes.length;
         return Math.round(avg);
     })();
 
@@ -92,84 +94,223 @@ export default function Analytics() {
     }
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
-                    <p className="text-muted-foreground text-sm mt-1">Insights on asset management and repair performance</p>
+        <div className="space-y-12 animate-fade-in pb-20 relative z-10 font-sans">
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+                <div className="space-y-1.5">
+                    <h1 className="text-4xl md:text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1]">
+                        Institutional <span className="text-primary italic">Intelligence</span>
+                    </h1>
+                    <p className="text-muted-foreground text-lg max-w-2xl font-medium tracking-tight opacity-70">
+                        Synthesized operational data and infrastructure performance metrics.
+                    </p>
                 </div>
-                <Button variant="outline" className="gap-2 self-start sm:self-auto">
-                    <Download className="w-4 h-4" /> Export Report
+                <Button variant="outline" className="h-14 px-8 rounded-2xl border-border bg-white hover:bg-slate-50 text-[10px] font-black uppercase tracking-[0.2em] shadow-sm transition-all active:scale-[0.98]">
+                    <Download className="w-4 h-4 mr-3 text-primary" /> Export Intelligence Report
                 </Button>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatsCard title="Total Requests" value={requests.length} icon={BarChart3} color="teal" />
-                <StatsCard title="Completion Rate" value={`${requests.length > 0 ? Math.round((requests.filter(r => r.status === 'Completed').length / requests.length) * 100) : 0}%`} icon={TrendingUp} color="green" />
-                <StatsCard title="Avg. Resolution" value={`${avgResolutionTime}d`} subtitle="days to complete" icon={Activity} color="blue" />
-                <StatsCard title="Critical Issues" value={requests.filter(r => r.priority === 'Critical').length} icon={TrendingUp} color="red" />
+            {/* Tactical Metrics Hub */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                    { label: 'Universal Inflow', val: requests.length, icon: BarChart3, color: 'text-primary' },
+                    { label: 'Settlement Ratio', val: `${requests.length > 0 ? Math.round((requests.filter(r => r.status === 'Completed').length / requests.length) * 100) : 0}%`, icon: TrendingUp, color: 'text-emerald-600' },
+                    { label: 'Velocity Index', val: `${avgResolutionTime}d`, icon: Activity, color: 'text-blue-600' },
+                    { label: 'Escalation Potential', val: requests.filter(r => r.priority === 'Critical').length, icon: TrendingUp, color: 'text-rose-600' }
+                ].map((kpi, idx) => (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        key={kpi.label} 
+                        className="bg-white p-6 rounded-[2rem] border border-border shadow-sm flex flex-col gap-4 group hover:shadow-xl transition-all duration-500"
+                    >
+                        <div className="flex items-center justify-between">
+                            <div className={cn("w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-border group-hover:bg-primary group-hover:text-white transition-all duration-500", kpi.color)}>
+                                <kpi.icon className="w-6 h-6" />
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{kpi.label}</span>
+                                <span className={cn("text-3xl font-serif font-black tracking-tighter", kpi.color)}>{kpi.val}</span>
+                            </div>
+                        </div>
+                    </motion.div>
+                ))}
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-6">
-                {/* Status Chart */}
-                <div className="bg-card rounded-2xl border border-border p-6">
-                    <h2 className="text-base font-semibold text-foreground mb-5">Request Status Distribution</h2>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <PieChart>
-                            <Pie data={statusData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value">
-                                {statusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                            </Pie>
-                            <Tooltip />
-                            <Legend />
-                        </PieChart>
-                    </ResponsiveContainer>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Status Allocation */}
+                <div className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm flex flex-col">
+                    <div className="mb-8">
+                        <h3 className="text-xl font-serif font-black text-foreground">Status <span className="text-primary italic">Distribution</span></h3>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Operational Lifecycle Segmenting</p>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center min-h-[300px]">
+                        <ResponsiveContainer width="100%" height={280}>
+                            <PieChart>
+                                <Pie data={statusData} cx="50%" cy="50%" innerRadius={75} outerRadius={95} paddingAngle={4} dataKey="value" stroke="none">
+                                    {statusData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="focus:outline-none" />
+                                    ))}
+                                </Pie>
+                                <Tooltip 
+                                    contentStyle={{ 
+                                        backgroundColor: 'white', 
+                                        borderRadius: '24px', 
+                                        border: '1px solid #e2e8f0', 
+                                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
+                                        padding: '16px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        fontFamily: 'Fraunces, serif'
+                                    }} 
+                                />
+                                <Legend 
+                                    verticalAlign="bottom" 
+                                    align="center" 
+                                    iconType="circle"
+                                    wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: '800', letterSpacing: '1px', opacity: 0.6 }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
-                {/* Priority Chart */}
-                <div className="bg-card rounded-2xl border border-border p-6">
-                    <h2 className="text-base font-semibold text-foreground mb-5">Requests by Priority</h2>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={priorityData} barSize={32}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                            <YAxis tick={{ fontSize: 12 }} />
-                            <Tooltip />
-                            <Bar dataKey="value" fill="#0d9488" radius={[6, 6, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
+                {/* Priority Distribution */}
+                <div className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm flex flex-col">
+                    <div className="mb-8">
+                        <h3 className="text-xl font-serif font-black text-foreground">Critical <span className="text-primary italic">Density</span></h3>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Registry Priority Stratification</p>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center min-h-[300px]">
+                        <ResponsiveContainer width="100%" height={280}>
+                            <BarChart data={priorityData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis 
+                                    dataKey="name" 
+                                    fontSize={10} 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    tick={{ fill: '#94a3b8', fontWeight: 800 }} 
+                                    dy={10}
+                                />
+                                <YAxis 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    tick={{ fill: '#94a3b8', fontWeight: 800 }} 
+                                />
+                                <Tooltip 
+                                    cursor={{ fill: '#f8fafc' }}
+                                    contentStyle={{ 
+                                        backgroundColor: 'white', 
+                                        borderRadius: '24px', 
+                                        border: '1px solid #e2e8f0', 
+                                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
+                                        padding: '16px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        fontFamily: 'Fraunces, serif'
+                                    }} 
+                                />
+                                <Bar dataKey="value" fill="#054a29" radius={[12, 12, 4, 4]} barSize={40} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
-                {/* Trend Chart */}
-                <div className="bg-card rounded-2xl border border-border p-6">
-                    <h2 className="text-base font-semibold text-foreground mb-5">Requests Trend (Last 7 Days)</h2>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <LineChart data={last7}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                            <YAxis tick={{ fontSize: 12 }} />
-                            <Tooltip />
-                            <Legend />
-                            <Line type="monotone" dataKey="requests" stroke="#0d9488" strokeWidth={2} dot={{ r: 4 }} name="Submitted" />
-                            <Line type="monotone" dataKey="completed" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} name="Completed" />
-                        </LineChart>
-                    </ResponsiveContainer>
+                {/* Timeline Analysis */}
+                <div className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm lg:col-span-2">
+                    <div className="mb-8">
+                        <h3 className="text-xl font-serif font-black text-foreground">Strategic <span className="text-primary italic">Velocity</span></h3>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">7-Day Distribution Inflow Metrics</p>
+                    </div>
+                    <div className="h-[400px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={last7} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis 
+                                    dataKey="date" 
+                                    fontSize={10} 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    tick={{ fill: '#94a3b8', fontWeight: 800 }} 
+                                    dy={10}
+                                />
+                                <YAxis 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    tick={{ fill: '#94a3b8', fontWeight: 800 }} 
+                                />
+                                <Tooltip 
+                                    contentStyle={{ 
+                                        backgroundColor: 'white', 
+                                        borderRadius: '24px', 
+                                        border: '1px solid #e2e8f0', 
+                                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
+                                        padding: '16px',
+                                        fontSize: '12px',
+                                        fontFamily: 'Fraunces, serif'
+                                    }} 
+                                />
+                                <Legend 
+                                    verticalAlign="top" 
+                                    align="right" 
+                                    iconType="circle"
+                                    wrapperStyle={{ paddingBottom: '40px', fontSize: '10px', fontWeight: '800', letterSpacing: '1px' }}
+                                />
+                                <Line type="monotone" dataKey="requests" stroke="#054a29" strokeWidth={4} dot={{ r: 0 }} activeDot={{ r: 8, strokeWidth: 4, stroke: '#fff' }} name="Registry Inflow" />
+                                <Line type="monotone" dataKey="completed" stroke="#94a3b8" strokeWidth={4} strokeDasharray="8 6" dot={{ r: 0 }} activeDot={{ r: 8, strokeWidth: 4, stroke: '#fff' }} name="Resolution Output" />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
-                {/* Asset Categories */}
-                <div className="bg-card rounded-2xl border border-border p-6">
-                    <h2 className="text-base font-semibold text-foreground mb-5">Assets by Category</h2>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={categoryData} barSize={20}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                            <YAxis tick={{ fontSize: 12 }} />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="assets" fill="#0d9488" radius={[4, 4, 0, 0]} name="Total Assets" />
-                            <Bar dataKey="damaged" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Damage Reports" />
-                        </BarChart>
-                    </ResponsiveContainer>
+                {/* Categorical Breakdown */}
+                <div className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm lg:col-span-2">
+                    <div className="mb-8">
+                        <h3 className="text-xl font-serif font-black text-foreground">Asset <span className="text-primary italic">Allocation</span></h3>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Registry Volume vs Damage Frequency</p>
+                    </div>
+                    <div className="h-[400px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={categoryData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis 
+                                    dataKey="name" 
+                                    fontSize={10} 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    tick={{ fill: '#94a3b8', fontWeight: 800 }} 
+                                    dy={10}
+                                />
+                                <YAxis 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    tick={{ fill: '#94a3b8', fontWeight: 800 }} 
+                                />
+                                <Tooltip 
+                                    cursor={{ fill: '#f8fafc' }}
+                                    contentStyle={{ 
+                                        backgroundColor: 'white', 
+                                        borderRadius: '24px', 
+                                        border: '1px solid #e2e8f0', 
+                                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
+                                        padding: '16px',
+                                        fontSize: '12px',
+                                        fontFamily: 'Fraunces, serif'
+                                    }} 
+                                />
+                                <Legend 
+                                    verticalAlign="top" 
+                                    align="right" 
+                                    iconType="circle"
+                                    wrapperStyle={{ paddingBottom: '40px', fontSize: '10px', fontWeight: '800', letterSpacing: '1px' }}
+                                />
+                                <Bar dataKey="assets" fill="#054a29" radius={[12, 12, 0, 0]} barSize={24} name="Total Inventory" />
+                                <Bar dataKey="damaged" fill="#f59e0b" radius={[12, 12, 0, 0]} barSize={24} name="Damage Registry" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </div>
         </div>

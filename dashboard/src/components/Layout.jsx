@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import {
     LayoutDashboard, Package, AlertTriangle, Wrench, BarChart3,
-    School, Menu, X, Bell, LogOut, ChevronRight, Shield, CalendarDays, ShieldAlert
+    Menu, X, LogOut, ChevronRight, QrCode, CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sileo } from 'sileo';
@@ -13,13 +13,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 
 const navItems = [
-    { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'teacher', 'principal', 'maintenance', 'supervisor'] },
-    { path: '/assets', label: 'Assets', icon: Package, roles: ['admin', 'teacher', 'principal', 'supervisor'] },
-    { path: '/repair-requests', label: 'Repair Requests', icon: AlertTriangle, roles: ['admin', 'teacher', 'principal', 'supervisor'] },
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'teacher', 'principal', 'maintenance'] },
+    { path: '/assets', label: 'Assets', icon: Package, roles: ['admin', 'teacher', 'principal'] },
+    { path: '/repair-requests', label: 'Repair Requests', icon: AlertTriangle, roles: ['admin', 'teacher', 'principal'] },
     { path: '/report-damage', label: 'Report Damage', icon: AlertTriangle, roles: ['admin', 'teacher'] },
     { path: '/tasks', label: 'My Tasks', icon: Wrench, roles: ['admin', 'maintenance'] },
-    { path: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin', 'principal', 'supervisor'] },
-    { path: '/calendar', label: 'Calendar', icon: CalendarDays, roles: ['admin', 'maintenance', 'principal', 'supervisor'] },
+    { path: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin', 'principal'] },
+    { path: '/calendar', label: 'Calendar', icon: CalendarDays, roles: ['admin', 'maintenance', 'principal'] },
 ];
 
 export default function Layout() {
@@ -43,32 +43,45 @@ export default function Layout() {
     return (
         <div className="h-screen bg-background flex overflow-hidden">
             {/* Mobile overlay */}
-            {sidebarOpen && (
-                <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
-            )}
+            <AnimatePresence>
+                {sidebarOpen && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" 
+                        onClick={() => setSidebarOpen(false)} 
+                    />
+                )}
+            </AnimatePresence>
 
             {/* Sidebar */}
             <aside className={cn(
-                "fixed top-0 left-0 h-screen w-64 bg-sidebar z-50 transform transition-transform duration-300 lg:translate-x-0 lg:relative lg:z-auto lg:flex-shrink-0",
-                sidebarOpen ? "translate-x-0" : "-translate-x-full"
+                "fixed top-0 left-0 h-screen w-72 bg-sidebar text-sidebar-foreground z-50 transform transition-transform duration-500 ease-[0.22, 1, 0.36, 1] lg:translate-x-0 lg:relative lg:z-auto lg:flex-shrink-0 border-r border-sidebar-border",
+                sidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
             )}>
-                <div className="flex flex-col h-full">
-                    {/* Logo */}
-                    <div className="flex items-center gap-3 px-6 h-20 flex-shrink-0 border-b border-sidebar-border">
-                        <div className="w-9 h-9 rounded-xl bg-teal flex items-center justify-center shadow-sm">
-                            <Shield className="w-5 h-5 text-white" />
+                <div className="flex flex-col h-full relative overflow-hidden">
+                    {/* Logo Section */}
+                    <div className="flex items-center gap-3 px-8 h-24 flex-shrink-0 relative z-10">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20 transform -rotate-3 transition-transform hover:rotate-0">
+                            <QrCode className="w-6 h-6" />
                         </div>
-                        <div>
-                            <span className="text-sidebar-foreground font-bold text-lg tracking-tight">AssetLink</span>
-                            <p className="text-xs text-sidebar-foreground/50 -mt-0.5">School Asset System</p>
+                        <div className="flex flex-col items-start leading-none gap-1">
+                            <span className="text-xl font-serif font-black tracking-tight text-white italic">Asset<span className="text-primary-foreground/80 not-italic font-sans font-bold tracking-tighter ml-0.5">Link</span></span>
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30 whitespace-nowrap">
+                                Resource Management
+                            </span>
                         </div>
-                        <button onClick={() => setSidebarOpen(false)} className="ml-auto lg:hidden text-sidebar-foreground/60 hover:text-sidebar-foreground">
+                        <button onClick={() => setSidebarOpen(false)} className="ml-auto lg:hidden text-white/40 hover:text-white">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
 
-                    {/* Nav */}
-                    <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+                    {/* Navigation */}
+                    <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1 relative z-10 custom-scrollbar">
+                        <div className="px-5 mb-4">
+                            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/20">Operational Hub</p>
+                        </div>
                         {visibleItems.map(({ path, label, icon: Icon }) => {
                             const active = location.pathname === path;
                             return (
@@ -77,89 +90,131 @@ export default function Layout() {
                                     to={path}
                                     onClick={() => setSidebarOpen(false)}
                                     className={cn(
-                                        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group",
+                                        "flex items-center gap-3 px-5 py-3.5 rounded-xl text-[13px] font-bold transition-all duration-300 group relative",
                                         active
-                                            ? "bg-teal text-white shadow-sm"
-                                            : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                                            ? "bg-primary text-white shadow-lg shadow-black/20"
+                                            : "text-white/50 hover:text-white hover:bg-white/5"
                                     )}
                                 >
-                                    <Icon className="w-4 h-4 flex-shrink-0" />
-                                    <span>{label}</span>
-                                    {active && <ChevronRight className="w-3 h-3 ml-auto opacity-70" />}
+                                    <Icon className={cn("w-4 h-4 flex-shrink-0 transition-all", active ? "scale-110" : "group-hover:scale-110")} />
+                                    <span className="tracking-tight">{label}</span>
+                                    {active && (
+                                        <motion.div 
+                                            layoutId="sidebar-active-indicator"
+                                            className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_white]" 
+                                        />
+                                    )}
                                 </Link>
                             );
                         })}
                     </nav>
 
-                    {/* User */}
-                    <div className="mt-auto px-3 py-4 border-t border-sidebar-border">
-                        <div className="flex items-center gap-3 px-3 py-2">
-                            <div className="w-8 h-8 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0">
-                                <span className="text-xs font-bold text-teal">
-                                    {currentUser?.full_name?.[0] || currentUser?.email?.[0] || 'U'}
-                                </span>
-                            </div>
-                                <div className="flex flex-col min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <p className="text-sm font-bold text-sidebar-foreground leading-tight">{currentUser?.full_name || 'User'}</p>
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-teal bg-teal/10 px-1.5 py-0.5 rounded-full flex-shrink-0">{role}</span>
-                                    </div>
-                                    <p className="text-[10px] text-sidebar-foreground/50 break-all mt-0.5">{currentUser?.email}</p>
+                    {/* User Profile Footer */}
+                    <div className="mt-auto p-4 relative z-10 border-t border-white/5">
+                        <div className="rounded-2xl p-4 transition-colors hover:bg-white/5">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 border border-white/10">
+                                    <span className="text-xs font-black text-white uppercase italic">
+                                        {currentUser?.full_name?.[0] || currentUser?.email?.[0] || 'U'}
+                                    </span>
                                 </div>
-                            <button
-                                onClick={() => setLogoutModalOpen(true)}
-                                className="text-sidebar-foreground/40 hover:text-destructive transition-colors flex-shrink-0"
-                            >
-                                <LogOut className="w-4 h-4" />
-                            </button>
+                                <div className="flex flex-col min-w-0">
+                                    <p className="text-sm font-bold text-white leading-tight truncate">
+                                        {currentUser?.full_name || 'System User'}
+                                    </p>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-primary-foreground/50 mt-1">
+                                        {role} Persona
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={() => setLogoutModalOpen(true)}
+                                    className="ml-auto text-white/20 hover:text-rose-400 transition-colors p-2"
+                                    title="Sign out"
+                                >
+                                    <LogOut className="w-4 h-4 transition-transform hover:-translate-x-1" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </aside>
 
-            {/* Main content */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-                {/* Top bar */}
-                <header className="h-20 bg-card/50 backdrop-blur-md border-b border-border flex items-center px-4 lg:px-8 gap-4 sticky top-0 z-30">
-                    <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-foreground/60 hover:text-foreground">
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col min-w-0 relative">
+                {/* Background Grid Overlay */}
+                <div className="al-grid-bg absolute inset-0 pointer-events-none opacity-[0.05]" aria-hidden="true" />
+                
+                {/* Top Header */}
+                <header className="h-20 bg-background/95 backdrop-blur-md border-b border-border flex items-center px-4 lg:px-10 gap-4 sticky top-0 z-30 transition-all">
+                    <button 
+                        onClick={() => setSidebarOpen(true)} 
+                        className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-border text-foreground/60 hover:text-foreground shadow-sm"
+                    >
                         <Menu className="w-5 h-5" />
                     </button>
+                    
+                    <div className="flex items-center gap-2">
+                        <div className="h-4 w-1 bg-primary/20 rounded-full hidden sm:block" />
+                        <h2 className="text-xs font-black text-primary/40 uppercase tracking-[0.2em]">
+                            {location.pathname === '/' ? 'Overview' : location.pathname.split('/')[1].replace('-', ' ')}
+                        </h2>
+                    </div>
+
                     <div className="flex-1" />
-                    <ThemeToggle />
-                    {/* Bell icon removed per user request */}
+                    
+                    <div className="flex items-center gap-3">
+                        <div className="hidden sm:flex items-center gap-2.5 px-4 py-2 rounded-full bg-background border border-border shadow-sm group">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest">
+                                Operational Status
+                            </span>
+                        </div>
+                        <div className="h-10 w-px bg-border mx-1 hidden sm:block" />
+                        <ThemeToggle />
+                    </div>
                 </header>
-                <main className="flex-1 p-4 lg:p-8">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={location.pathname}
-                            initial={{ opacity: 0, y: 15 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -15 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        >
-                            <Outlet />
-                        </motion.div>
-                    </AnimatePresence>
+
+                {/* Content Container */}
+                <main className="flex-1 relative z-10 overflow-y-auto">
+                    <div className="p-6 lg:p-10 max-w-7xl mx-auto min-h-full">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={location.pathname}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            >
+                                <Outlet />
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
                 </main>
             </div>
 
             {/* Logout Confirmation Modal */}
             <Dialog open={logoutModalOpen} onOpenChange={setLogoutModalOpen}>
-                <DialogContent className="sm:max-w-md rounded-2xl border-none">
+                <DialogContent className="sm:max-w-md rounded-2xl border-none p-8">
                     <DialogHeader>
-                        <DialogTitle className="text-xl font-bold tracking-tight">Confirm Logout</DialogTitle>
+                        <DialogTitle className="text-2xl font-bold tracking-tight text-center">Sign out</DialogTitle>
                     </DialogHeader>
-                    <div className="pt-2 pb-4">
-                        <p className="text-sm text-muted-foreground">
-                            Are you sure you want to sign out of your account? You will need to log in again to access the system.
+                    <div className="py-6 text-center">
+                        <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <LogOut className="w-8 h-8 text-red-600 dark:text-red-400" />
+                        </div>
+                        <p className="text-muted-foreground">
+                            Are you sure you want to log out? <br /> You will need your credentials to access the platform again.
                         </p>
                     </div>
                     <div className="flex gap-3">
-                        <Button variant="outline" onClick={() => setLogoutModalOpen(false)} className="flex-1 font-bold h-11 rounded-xl">
-                            Cancel
+                        <Button variant="outline" onClick={() => setLogoutModalOpen(false)} className="flex-1 font-bold h-12 rounded-xl border-border">
+                            Stay active
                         </Button>
-                        <Button onClick={handleLogout} variant="destructive" className="flex-1 font-bold h-11 rounded-xl bg-red-500 hover:bg-red-600">
-                            Yes, Log me out
+                        <Button onClick={handleLogout} variant="destructive" className="flex-1 font-bold h-12 rounded-xl bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200 dark:shadow-none">
+                            Yes, Logout
                         </Button>
                     </div>
                 </DialogContent>

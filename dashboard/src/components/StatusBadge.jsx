@@ -2,39 +2,43 @@ import { cn } from '@/lib/utils';
 
 const statusConfig = {
     // Repair status
-    Pending: { bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500' },
-    Approved: { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
-    'In Progress': { bg: 'bg-indigo-100', text: 'text-indigo-700', dot: 'bg-indigo-500' },
-    Completed: { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-    Rejected: { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' },
-    Escalated: { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' },
+    Pending: { glassBg: 'bg-amber-400/10', text: 'text-amber-600', dot: 'bg-amber-500', border: 'border-amber-500/10' },
+    Approved: { glassBg: 'bg-sky-400/10', text: 'text-sky-600', dot: 'bg-sky-500', border: 'border-sky-500/10' },
+    'In Progress': { glassBg: 'bg-indigo-400/10', text: 'text-indigo-600', dot: 'bg-indigo-500', border: 'border-indigo-500/10' },
+    Completed: { glassBg: 'bg-emerald-400/10', text: 'text-emerald-600', dot: 'bg-emerald-500', border: 'border-emerald-500/10' },
+    Rejected: { glassBg: 'bg-rose-400/10', text: 'text-rose-600', dot: 'bg-rose-500', border: 'border-rose-500/10' },
+    Escalated: { glassBg: 'bg-purple-400/10', text: 'text-purple-600', dot: 'bg-purple-500', border: 'border-purple-500/10' },
+    
     // Priority
-    Low: { bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400' },
-    Medium: { bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500' },
-    High: { bg: 'bg-orange-100', text: 'text-orange-700', dot: 'bg-orange-500' },
-    Critical: { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-600' },
+    Low: { glassBg: 'bg-slate-400/10', text: 'text-slate-500', dot: 'bg-slate-400', border: 'border-slate-500/10' },
+    Medium: { glassBg: 'bg-amber-400/10', text: 'text-amber-600', dot: 'bg-amber-500', border: 'border-amber-500/10' },
+    High: { glassBg: 'bg-orange-400/10', text: 'text-orange-600', dot: 'bg-orange-500', border: 'border-orange-500/10' },
+    Critical: { glassBg: 'bg-rose-500/15', text: 'text-rose-600', dot: 'bg-rose-600', border: 'border-rose-500/20' },
+    
     // Condition
-    Excellent: { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-    Good: { bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' },
-    Fair: { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-500' },
-    Poor: { bg: 'bg-orange-100', text: 'text-orange-700', dot: 'bg-orange-500' },
-    Damaged: { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' },
-    Condemned: { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-500' },
+    Excellent: { glassBg: 'bg-emerald-400/10', text: 'text-emerald-600', dot: 'bg-emerald-500', border: 'border-emerald-500/10' },
+    Good: { glassBg: 'bg-green-400/10', text: 'text-green-600', dot: 'bg-green-500', border: 'border-green-500/10' },
+    Fair: { glassBg: 'bg-yellow-400/10', text: 'text-yellow-600', dot: 'bg-yellow-500', border: 'border-yellow-500/10' },
+    Poor: { glassBg: 'bg-orange-400/10', text: 'text-orange-600', dot: 'bg-orange-500', border: 'border-orange-500/10' },
+    Damaged: { glassBg: 'bg-rose-400/10', text: 'text-rose-600', dot: 'bg-rose-500', border: 'border-rose-500/10' },
+    Condemned: { glassBg: 'bg-slate-500/10', text: 'text-slate-600', dot: 'bg-slate-500', border: 'border-slate-500/10' },
+    
     // Task
-    Assigned: { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
-    'On Hold': { bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500' },
-    'Pending Teacher Verification': { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
+    Assigned: { glassBg: 'bg-sky-400/10', text: 'text-sky-600', dot: 'bg-sky-500', border: 'border-sky-500/10' },
+    'On Hold': { glassBg: 'bg-amber-400/10', text: 'text-amber-600', dot: 'bg-amber-500', border: 'border-amber-500/10' },
+    'Pending Teacher Verification': { glassBg: 'bg-sky-400/10', text: 'text-sky-600', dot: 'bg-sky-500', border: 'border-sky-500/10' },
 };
 
 export default function StatusBadge({ status, size = 'sm' }) {
-    const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+    const config = statusConfig[status] || { glassBg: 'bg-slate-100/10', text: 'text-slate-500', dot: 'bg-slate-400', border: 'border-slate-500/10' };
+    
     return (
         <span className={cn(
-            "inline-flex items-center gap-1.5 font-medium rounded-full",
-            config.bg, config.text,
-            size === 'sm' ? 'text-xs px-2.5 py-1' : 'text-sm px-3 py-1.5'
+            "inline-flex items-center gap-1.5 font-bold rounded-full border backdrop-blur-md transition-all uppercase tracking-wider",
+            config.glassBg, config.text, config.border,
+            size === 'sm' ? 'text-[9px] px-2 py-0.5' : 'text-[10px] px-3 py-1'
         )}>
-            <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", config.dot)} />
+            <span className={cn("w-1 h-1 rounded-full flex-shrink-0 animate-pulse", config.dot)} />
             {status}
         </span>
     );

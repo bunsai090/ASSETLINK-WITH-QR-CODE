@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { sileo } from 'sileo';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const CATEGORIES = ['Furniture', 'Electronics', 'Laboratory Equipment', 'Sports Equipment', 'Books & Materials', 'Appliances', 'Structural', 'Other'];
 const CONDITIONS = ['Excellent', 'Good', 'Fair', 'Poor', 'Damaged', 'Condemned'];
@@ -28,7 +30,6 @@ export default function Assets() {
     const [saving, setSaving] = useState(false);
     const [selected, setSelected] = useState(new Set());
     const [selectMode, setSelectMode] = useState(false);
-    const [generatingPdf, setGeneratingPdf] = useState(false);
 
     useEffect(() => {
         const assetsQuery = query(collection(db, 'assets'), orderBy('created_at', 'desc'));
@@ -40,6 +41,14 @@ export default function Assets() {
         return () => unsubscribe();
     }, []);
 
+    const filtered = assets.filter(a => {
+        const matchSearch = !search || a.name?.toLowerCase().includes(search.toLowerCase()) || a.asset_code?.toLowerCase().includes(search.toLowerCase());
+        const matchCat = filterCategory === 'all' || a.category === filterCategory;
+        const matchCond = filterCondition === 'all' || a.condition === filterCondition;
+        return matchSearch && matchCat && matchCond;
+    });
+
+    // ... (helper functions keep logic same)
     function toggleSelect(id) {
         setSelected(prev => {
             const next = new Set(prev);
@@ -138,13 +147,6 @@ export default function Assets() {
         window.open(url, '_blank');
     }
 
-    const filtered = assets.filter(a => {
-        const matchSearch = !search || a.name?.toLowerCase().includes(search.toLowerCase()) || a.asset_code?.toLowerCase().includes(search.toLowerCase());
-        const matchCat = filterCategory === 'all' || a.category === filterCategory;
-        const matchCond = filterCondition === 'all' || a.condition === filterCondition;
-        return matchSearch && matchCat && matchCond;
-    });
-
     function openCreate() {
         setEditing(null);
         setForm({ name: '', asset_code: '', category: 'Furniture', condition: 'Good', location: '', school_name: '', description: '' });
@@ -190,152 +192,207 @@ export default function Assets() {
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground tracking-tight italic">Inventory Control</h1>
-                    <p className="text-muted-foreground text-sm mt-1">Register and track all official school resources.</p>
+        <div className="space-y-10 animate-fade-in pb-20">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div className="space-y-1">
+                    <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground tracking-tight">
+                        Inventory <span className="text-primary italic">Control</span>
+                    </h1>
+                    <p className="text-muted-foreground text-lg max-w-2xl font-medium tracking-tight opacity-80">
+                        {assets.length} items registered across the campus ecosystem.
+                    </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-3 shrink-0">
                     {selectMode && selected.size > 0 && (
-                        <Button onClick={handleOpenQrTab} variant="outline" className="h-10 border-teal text-teal font-bold rounded-xl gap-2 shadow-sm">
-                            <Printer className="w-4 h-4" /> {`Print QR (${selected.size})`}
+                        <Button onClick={handleOpenQrTab} variant="outline" className="h-12 border-primary/20 text-primary font-bold rounded-2xl gap-2 px-6 shadow-xl shadow-primary/5">
+                            <Printer className="w-4 h-4" /> {`Export Selected (${selected.size})`}
                         </Button>
                     )}
                     {(role === 'admin' || role === 'principal' || role === 'supervisor') && (
-                        <Button onClick={() => { setSelectMode(s => !s); setSelected(new Set()); }} variant={selectMode ? 'secondary' : 'outline'} className="h-10 rounded-xl gap-2 font-bold transition-all">
-                            <QrCode className="w-4 h-4" /> {selectMode ? 'Cancel' : 'Labels'}
+                        <Button onClick={() => { setSelectMode(s => !s); setSelected(new Set()); }} variant={selectMode ? 'secondary' : 'outline'} className="h-12 rounded-2xl gap-2 px-6 font-bold transition-all border-border hover:border-primary/20">
+                            <QrCode className="w-4 h-4" /> {selectMode ? 'Dismiss Labels' : 'Print Labels'}
                         </Button>
                     )}
                     {(role === 'admin' || role === 'principal' || role === 'supervisor') && (
-                        <Button onClick={openCreate} className="h-10 bg-teal hover:bg-teal/90 text-white font-bold rounded-xl gap-2 shadow-lg shadow-teal/20">
-                            <Plus className="w-4 h-4" /> Add Asset
+                        <Button onClick={openCreate} className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-2xl gap-2 px-8 shadow-xl shadow-primary/20">
+                            <Plus className="w-5 h-5" /> New Registration
                         </Button>
                     )}
                 </div>
             </div>
 
-            {/* Select all bar */}
-            {selectMode && (
-                <div className="flex items-center gap-3 bg-teal/5 border border-teal/20 rounded-2xl px-5 py-3 text-sm animate-in zoom-in-95 duration-200">
-                    <button onClick={toggleSelectAll} className="flex items-center gap-2 text-teal font-black hover:underline uppercase tracking-tighter">
-                        {selected.size === filtered.length ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                        {selected.size === filtered.length ? 'Deselect All' : 'Select All'}
-                    </button>
-                    <span className="text-muted-foreground font-medium">{selected.size} items selected</span>
-                </div>
-            )}
+            {/* Select All Bar */}
+            <AnimatePresence>
+                {selectMode && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="flex items-center gap-4 bg-primary/[0.03] border border-primary/10 rounded-3xl px-6 py-4 text-sm"
+                    >
+                        <button onClick={toggleSelectAll} className="flex items-center gap-2 text-primary font-black hover:opacity-80 uppercase tracking-tighter transition-all">
+                            {selected.size === filtered.length ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                            {selected.size === filtered.length ? 'Deselect Range' : 'Select Full Range'}
+                        </button>
+                        <div className="w-1 h-1 rounded-full bg-primary/20" />
+                        <span className="text-muted-foreground font-bold tracking-tight uppercase text-[10px]">{selected.size} specific units selected</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            {/* Filters Bar */}
+            <div className="flex flex-col md:flex-row gap-4 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-4 rounded-[2rem] border border-white dark:border-white/5 shadow-sm">
                 <div className="relative flex-1 group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-teal transition-colors" />
-                    <Input placeholder="Search assets by name or code..." className="pl-9 bg-card border-border h-11" value={search} onChange={e => setSearch(e.target.value)} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <Input 
+                        placeholder="Search registry by name, serial, or code..." 
+                        className="pl-11 h-12 bg-transparent border-none ring-0 focus-visible:ring-0 text-foreground font-medium placeholder:text-muted-foreground/50" 
+                        value={search} 
+                        onChange={e => setSearch(e.target.value)} 
+                    />
                 </div>
-                <Select value={filterCategory} onValueChange={setFilterCategory}>
-                    <SelectTrigger className="w-full sm:w-48 bg-card border-border h-11"><SelectValue placeholder="Category" /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+                <div className="flex gap-4">
+                    <Select value={filterCategory} onValueChange={setFilterCategory}>
+                        <SelectTrigger className="w-full md:w-56 h-12 bg-white/50 dark:bg-slate-800/50 rounded-2xl border-white dark:border-white/5 shadow-sm font-bold text-xs uppercase tracking-widest px-6">
+                            <SelectValue placeholder="All Categories" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl">
+                            <SelectItem value="all">Comprehensive View</SelectItem>
+                            {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
             {loading ? (
-                <div className="flex justify-center py-24"><div className="w-8 h-8 border-4 border-teal/20 border-t-teal rounded-full animate-spin" /></div>
+                <div className="flex justify-center py-40">
+                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filtered.length === 0 ? (
-                        <div className="col-span-full text-center py-24 text-muted-foreground bg-card rounded-2xl border border-dashed border-border/60 uppercase font-bold tracking-widest text-xs">
-                            <Package className="w-12 h-12 mx-auto mb-4 opacity-10" />
-                            No matches found in inventory
+                        <div className="col-span-full text-center py-40 bg-white/30 dark:bg-slate-900/20 rounded-[3rem] border border-dashed border-border/60 flex flex-col items-center justify-center grayscale opacity-40">
+                            <Package className="w-20 h-20 mb-6" />
+                            <h3 className="text-2xl font-serif font-bold text-foreground">Registry Empty</h3>
+                            <p className="text-xs font-black uppercase tracking-[0.3em] mt-2">Zero matching data points</p>
                         </div>
-                    ) : filtered.map(asset => (
-                        <div
+                    ) : filtered.map((asset, idx) => (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: idx * 0.02 }}
                             key={asset.id}
                             onClick={selectMode ? () => toggleSelect(asset.id) : undefined}
-                            className={`bg-card rounded-2xl border-2 p-5 flex flex-col hover:shadow-xl transition-all group cursor-${selectMode ? 'pointer' : 'default'} ${selectMode && selected.has(asset.id) ? 'border-teal bg-teal/5 ring-1 ring-teal' : 'border-border'
-                                }`}
+                            className={cn(
+                                "group relative flex flex-col bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] p-6 transition-all duration-500 border-2",
+                                selectMode ? "cursor-pointer" : "cursor-default",
+                                selectMode && selected.has(asset.id) 
+                                    ? "border-primary ring-4 ring-primary/5 bg-primary/5" 
+                                    : "border-transparent hover:border-primary/20 hover:shadow-2xl hover:shadow-black/5"
+                            )}
                         >
-                            <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-start justify-between mb-6">
                                 <div className="relative">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${selectMode && selected.has(asset.id) ? 'bg-teal text-white' : 'bg-slate-100 text-slate-400'}`}>
-                                        <Package className="w-6 h-6" />
+                                    <div className={cn(
+                                        "w-14 h-14 rounded-3xl flex items-center justify-center transition-all duration-500",
+                                        selectMode && selected.has(asset.id) 
+                                            ? "bg-primary text-white scale-110 rotate-3 shadow-lg shadow-primary/20" 
+                                            : "bg-secondary text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary group-hover:rotate-3"
+                                    )}>
+                                        <Package className="w-7 h-7" />
                                     </div>
                                     {selectMode && (
-                                        <div className={`absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full border-2 flex items-center justify-center shadow-sm ${selected.has(asset.id) ? 'bg-teal border-teal' : 'bg-white border-slate-200'}`}>
-                                            {selected.has(asset.id) && <span className="text-white text-[11px] font-black italic">✓</span>}
+                                        <div className={cn(
+                                            "absolute -top-1 -right-1 w-6 h-6 rounded-full border-2 flex items-center justify-center shadow-lg transition-all",
+                                            selected.has(asset.id) ? "bg-primary border-primary scale-110" : "bg-white border-slate-200"
+                                        )}>
+                                            {selected.has(asset.id) && <span className="text-white text-[10px] font-black italic">✓</span>}
                                         </div>
                                     )}
                                 </div>
                                 {!selectMode && (role === 'admin' || role === 'principal') && (
-                                    <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={(e) => { e.stopPropagation(); openEdit(asset); }} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-foreground transition-all">
+                                    <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                                        <button onClick={(e) => { e.stopPropagation(); openEdit(asset); }} className="p-2.5 rounded-xl bg-white border border-border text-muted-foreground hover:text-primary hover:border-primary shadow-sm transition-all active:scale-90">
                                             <Edit2 className="w-4 h-4" />
                                         </button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDelete(asset.id); }} className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all">
+                                        <button onClick={(e) => { e.stopPropagation(); handleDelete(asset.id); }} className="p-2.5 rounded-xl bg-white border border-border text-muted-foreground hover:text-rose-500 hover:border-rose-200 shadow-sm transition-all active:scale-90">
                                             <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
                                 )}
                             </div>
-                            <div className="flex-1">
-                                <h3 className="font-black text-foreground text-sm uppercase tracking-tight leading-tight">{asset.name}</h3>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-[10px] font-black text-teal bg-teal/5 px-1.5 py-0.5 rounded border border-teal/10 uppercase tracking-widest">{asset.asset_code}</span>
-                                    {asset.location && <span className="text-[10px] font-bold text-muted-foreground line-clamp-1 italic">{asset.location}</span>}
+                            <div className="flex-1 space-y-2">
+                                <h3 className="font-serif font-black text-lg text-foreground leading-[1.1] truncate group-hover:text-primary transition-colors">{asset.name}</h3>
+                                <div className="flex flex-wrap items-center gap-2 overflow-hidden">
+                                    <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10 uppercase tracking-widest whitespace-nowrap">
+                                        {asset.asset_code}
+                                    </span>
+                                    {asset.location && (
+                                        <span className="text-[11px] font-bold text-muted-foreground line-clamp-1 italic tracking-tight opacity-70">
+                                            {asset.location}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
-                            <div className="flex flex-wrap gap-1.5 mt-5">
-                                <span className="text-[10px] font-bold text-slate-400 border border-slate-100 rounded px-2 py-0.5">{asset.category}</span>
+                            <div className="flex flex-wrap gap-2 mt-8">
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 border border-slate-100 dark:border-white/5 rounded-full px-3 py-1">
+                                    {asset.category}
+                                </span>
                                 {asset.condition && <StatusBadge status={asset.condition} />}
                             </div>
-                        </div>
+                        </motion.div>
                     ))}
                 </div>
             )}
 
-            {/* Modal */}
+            {/* Asset Modal */}
             <Dialog open={showModal} onOpenChange={setShowModal}>
-                <DialogContent className="sm:max-w-md rounded-2xl border-none">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-black uppercase tracking-tight">{editing ? 'Edit Asset Record' : 'Assign New Asset'}</DialogTitle>
+                <DialogContent className="sm:max-w-xl rounded-[2.5rem] border-none p-10 bg-white/95 backdrop-blur-2xl">
+                    <DialogHeader className="mb-8">
+                        <DialogTitle className="text-3xl font-serif font-bold tracking-tight">
+                            {editing ? (
+                                <>Edit <span className="text-primary italic">Record</span></>
+                            ) : (
+                                <>Register <span className="text-primary italic">Asset</span></>
+                            )}
+                        </DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-5 py-4">
-                        <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-2 gap-6">
                             <div className="col-span-2 space-y-2">
-                                <Label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Asset Designation</Label>
-                                <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Smart TV - Grade 10" className="h-11 rounded-xl" />
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Asset Identity</Label>
+                                <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Dell Smart Hub - Lab Alpha" className="h-14 rounded-2xl bg-secondary/30 border-none font-bold placeholder:font-medium" />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Asset Code</Label>
-                                <Input value={form.asset_code} onChange={e => setForm({ ...form, asset_code: e.target.value })} placeholder="TV-10A" className="h-11 rounded-xl" />
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Serial / Code</Label>
+                                <Input value={form.asset_code} onChange={e => setForm({ ...form, asset_code: e.target.value })} placeholder="AL-001" className="h-14 rounded-2xl bg-secondary/30 border-none font-bold" />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Category</Label>
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Tactical Category</Label>
                                 <Select value={form.category} onValueChange={v => setForm({ ...form, category: v })}>
-                                    <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
-                                    <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                                    <SelectTrigger className="h-14 rounded-2xl bg-secondary/30 border-none font-bold"><SelectValue /></SelectTrigger>
+                                    <SelectContent className="rounded-2xl">{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Condition</Label>
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Current State</Label>
                                 <Select value={form.condition} onValueChange={v => setForm({ ...form, condition: v })}>
-                                    <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
-                                    <SelectContent>{CONDITIONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                                    <SelectTrigger className="h-14 rounded-2xl bg-secondary/30 border-none font-bold"><SelectValue /></SelectTrigger>
+                                    <SelectContent className="rounded-2xl">{CONDITIONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Room / Location</Label>
-                                <Input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Room 204" className="h-11 rounded-xl" />
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Precise Location</Label>
+                                <Input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Faculty Wing - Rm 3" className="h-14 rounded-2xl bg-secondary/30 border-none font-bold" />
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                        <Button onClick={handleSave} disabled={saving} className="h-12 bg-teal hover:bg-teal/90 text-white font-black uppercase tracking-widest rounded-xl shadow-lg shadow-teal/20 transition-all active:scale-95">
-                            {saving ? 'Processing...' : (editing ? 'Apply Changes' : 'Register Asset')}
+                    <div className="flex flex-col gap-3 mt-10">
+                        <Button onClick={handleSave} disabled={saving} className="h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95 text-sm">
+                            {saving ? 'Synchronizing...' : (editing ? 'Submit Changes' : 'Execute Registration')}
                         </Button>
-                        <Button variant="ghost" onClick={() => setShowModal(false)} className="text-slate-400 font-bold uppercase text-[10px]">Cancel</Button>
+                        <Button variant="ghost" onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground font-bold uppercase text-[10px] tracking-widest">Abort Process</Button>
                     </div>
                 </DialogContent>
             </Dialog>

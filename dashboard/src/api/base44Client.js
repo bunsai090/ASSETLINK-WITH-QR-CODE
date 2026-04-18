@@ -1,18 +1,12 @@
-/// <reference types="vite/client" />
-
+import { createClient } from '@base44/sdk';
+import { appParams } from '@/lib/app-params';
 import { mockBase44 } from './mockBase44';
 
-// Use mock client for local development.
-// To connect to a real Base44 backend, set VITE_BASE44_REAL_BACKEND=true
-// in your .env file and ensure VITE_BASE44_APP_BASE_URL points to the real server.
 const useRealBackend = import.meta.env.VITE_BASE44_REAL_BACKEND === 'true';
 
 let base44Instance;
 
 if (useRealBackend) {
-    // Dynamic import only when needed — avoids errors when no real backend exists
-    const { createClient } = await import('@base44/sdk');
-    const { appParams } = await import('@/lib/app-params');
     const { appId, token, functionsVersion, appBaseUrl } = appParams;
     base44Instance = createClient({
         appId,

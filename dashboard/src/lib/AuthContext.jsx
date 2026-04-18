@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
     return (
         <AuthContext.Provider value={{
             user,
-            currentUser: user,
+            currentUser: user, // Alias for better readability in consumer components
             isAuthenticated,
             isLoadingAuth,
             authError,
