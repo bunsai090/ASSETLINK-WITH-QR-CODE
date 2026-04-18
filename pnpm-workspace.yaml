@@ -1,0 +1,4 @@
+packages:
+  - "landing"
+  - "dashboard"
+  - "backend"

@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import './config/firebase.js';
+import apiRouter from './routes/api.js';
 
 dotenv.config();
 
@@ -15,6 +16,9 @@ app.use(helmet());
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
+
+// API Routes
+app.use('/api', apiRouter);
 
 // Basic Route
 app.get('/', (req, res) => {
