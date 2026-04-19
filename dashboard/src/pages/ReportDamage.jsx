@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/lib/AuthContext';
-import { Camera, Upload, Search, AlertTriangle, CheckCircle, QrCode, X, Package } from 'lucide-react';
+import { Camera, Upload, Search, AlertTriangle, CheckCircle, QrCode, X, Package, ShieldAlert, ArrowUpCircle, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { sileo } from 'sileo';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -107,251 +108,257 @@ export default function ReportDamage() {
 
     return (
         <div className="space-y-12 animate-fade-in pb-20 relative z-10 font-sans">
-            <div className="space-y-1.5">
-                <h1 className="text-4xl md:text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1]">
-                    Incident <span className="text-primary italic">Reporting</span>
-                </h1>
-                <p className="text-muted-foreground text-lg max-w-2xl font-medium tracking-tight opacity-70">
-                    Capture technical evidence and initiate the rapid restoration protocol.
-                </p>
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+                <div className="space-y-1.5">
+                    <h1 className="text-4xl md:text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1]">
+                        Operational <span className="text-primary italic">Intelligence</span>
+                    </h1>
+                    <p className="text-muted-foreground text-lg max-w-2xl font-medium tracking-tight opacity-70">
+                        Incident reporting and evidence synchronization registry.
+                    </p>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-                
-                {/* LEFT COLUMN: Visual Evidence */}
-                <div className="lg:col-span-12 xl:col-span-5 space-y-8">
-                    <div className="space-y-4">
-                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Visual Evidence</Label>
-                        <div
-                            onClick={() => fileRef.current?.click()}
-                            className={cn(
-                                "relative border border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 overflow-hidden group min-h-[400px] flex flex-col items-center justify-center bg-white shadow-sm",
-                                photoPreview ? "border-primary/30" : "border-border hover:bg-slate-50"
-                            )}
-                        >
-                            <AnimatePresence mode="wait">
-                                {photoPreview ? (
-                                    <motion.div 
-                                        initial={{ opacity: 0, scale: 0.98 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.98 }}
-                                        className="relative w-full aspect-[4/5] rounded-xl overflow-hidden shadow-sm"
+                {/* Evidence Section */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className="lg:col-span-5 space-y-8"
+                >
+                    <div className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm flex flex-col items-center justify-center min-h-[500px] group transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5">
+                        <div className="relative w-full aspect-square max-w-[350px] flex flex-col items-center justify-center">
+                            {photoPreview ? (
+                                <div className="relative w-full h-full rounded-[2rem] overflow-hidden border border-border shadow-2xl group-hover:scale-[1.02] transition-transform duration-700">
+                                    <img src={photoPreview} alt="damage" className="w-full h-full object-cover" />
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); setPhotoPreview(null); }}
+                                        className="absolute top-4 right-4 w-12 h-12 bg-white/90 backdrop-blur-md rounded-2xl flex items-center justify-center text-rose-600 hover:bg-white transition-all shadow-xl"
                                     >
-                                        <img src={photoPreview} alt="preview" className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <div className="p-4 bg-white/20 backdrop-blur-md rounded-full border border-white/30">
-                                                <Camera className="w-8 h-8 text-white" />
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <label className="w-full h-full rounded-[2rem] border-2 border-dashed border-slate-200 bg-slate-50/50 flex flex-col items-center justify-center cursor-pointer hover:bg-white hover:border-primary/20 transition-all duration-500 group/label shadow-inner p-8 text-center">
+                                    <div className="w-20 h-20 rounded-3xl bg-white border border-border flex items-center justify-center text-muted-foreground mb-6 shadow-sm group-hover/label:bg-primary group-hover/label:text-white group-hover/label:scale-110 transition-all duration-500">
+                                        <ShieldAlert className="w-10 h-10" />
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-2 italic">Observation Chamber</span>
+                                    <span className="text-xl font-serif font-black text-foreground">Awaiting <span className="text-primary italic">Visual Evidence</span></span>
+                                    <p className="text-xs font-medium text-muted-foreground mt-4 leading-relaxed max-w-[200px]">Capture or upload real-time operational damage logs.</p>
+                                    <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhoto} />
+                                </label>
+                            )}
+                        </div>
+
+                        <div className="mt-8 flex flex-col items-center gap-2">
+                            <div className="flex gap-1.5">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className={cn("w-1.5 h-1.5 rounded-full transition-all duration-700", photoPreview ? 'bg-primary scale-x-150' : 'bg-slate-200')} />
+                                ))}
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30 italic">Registry Status: {photoPreview ? 'Evidence Captured' : 'Awaiting Link'}</span>
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-50/50 border border-border rounded-[2.5rem] p-8 flex items-start gap-5">
+                        <div className="w-12 h-12 rounded-2xl bg-white border border-border flex items-center justify-center text-primary shadow-sm">
+                            <Search className="w-6 h-6" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Protocol Verification</span>
+                            <p className="text-xs font-medium text-foreground/70 leading-relaxed italic mt-1">High-fidelity imagery ensures accelerated command approval and tactical resolution deployment.</p>
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* Form Section */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+                    className="lg:col-span-7 bg-white rounded-[2.5rem] border border-border p-10 shadow-sm"
+                >
+                    <div className="mb-10">
+                        <h3 className="text-2xl font-serif font-black text-foreground">Incident <span className="text-primary italic">Nomenclature</span></h3>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mt-1">Tactical Asset Damage Logging</p>
+                    </div>
+
+                    <div className="space-y-10">
+                        {/* Step 2: Asset Identification */}
+                        <div className="space-y-4">
+                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 ml-1 italic">Asset Identity</Label>
+                            
+                            <AnimatePresence mode="wait">
+                                {!selectedAsset ? (
+                                    <motion.div 
+                                        key="search"
+                                        initial={{ opacity: 0, x: 10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -10 }}
+                                        className="bg-slate-50 rounded-3xl border border-transparent p-6 shadow-inner space-y-6"
+                                    >
+                                        <div className="flex gap-3">
+                                            <div className="relative flex-1 group">
+                                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                                <Input 
+                                                    placeholder="Search registry by name or operational code..." 
+                                                    className="pl-12 h-14 rounded-2xl bg-white border-none font-bold placeholder:font-medium text-sm shadow-sm" 
+                                                    value={assetSearch} 
+                                                    onChange={e => setAssetSearch(e.target.value)} 
+                                                />
                                             </div>
+                                            <Button 
+                                                variant="outline" 
+                                                onClick={() => setShowQR(!showQR)} 
+                                                className={cn(
+                                                    "h-14 w-14 rounded-2xl shrink-0 transition-all p-0 border-border bg-white shadow-sm",
+                                                    showQR ? "bg-primary border-primary text-white shadow-lg shadow-primary/10" : "hover:bg-slate-50"
+                                                )}
+                                            >
+                                                <QrCode className="w-5 h-5" />
+                                            </Button>
                                         </div>
-                                        <button
-                                            onClick={e => { e.stopPropagation(); setPhotoPreview(null); }}
-                                            className="absolute top-4 right-4 bg-white text-rose-600 rounded-xl w-10 h-10 flex items-center justify-center shadow-lg hover:bg-rose-600 hover:text-white transition-all z-20"
-                                        >
-                                            <X className="w-5 h-5" />
-                                        </button>
+
+                                        <div className="space-y-1 max-h-72 overflow-y-auto pr-2 custom-scrollbar">
+                                            {filteredAssets.length === 0 ? (
+                                                <div className="text-center py-12 opacity-40 flex flex-col items-center italic">
+                                                    <Package className="w-10 h-10 mb-3 text-muted-foreground" />
+                                                    <p className="text-xs font-bold">No assets found in registry</p>
+                                                </div>
+                                            ) : (
+                                                filteredAssets.map(asset => (
+                                                    <div
+                                                        key={asset.id}
+                                                        onClick={() => setSelectedAsset(asset)}
+                                                        className="flex items-center gap-4 p-4 rounded-2xl border border-transparent hover:border-border hover:bg-white cursor-pointer transition-all duration-300 group"
+                                                    >
+                                                        <div className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-white shadow-sm transition-all flex-shrink-0">
+                                                            <Package className="w-5 h-5" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-serif font-black text-foreground truncate">{asset.name}</p>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">{asset.asset_code}</span>
+                                                                <span className="text-[9px] font-bold text-muted-foreground/40 uppercase">• {asset.location}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
                                     </motion.div>
                                 ) : (
-                                    <div className="space-y-6 flex flex-col items-center">
-                                        <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center text-muted-foreground group-hover:bg-primary/5 group-hover:text-primary transition-all duration-300 border border-border">
-                                            <Camera className="w-10 h-10" />
+                                    <motion.div 
+                                        key="selected"
+                                        initial={{ opacity: 0, scale: 0.98 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="bg-primary/5 rounded-3xl border border-primary/20 p-6 shadow-sm flex items-center justify-between group"
+                                    >
+                                        <div className="flex items-center gap-5">
+                                            <div className="w-16 h-16 rounded-2xl bg-primary text-white flex items-center justify-center shadow-xl shadow-primary/20 transition-transform group-hover:rotate-1">
+                                                <Package className="w-8 h-8" />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-3">
+                                                    <h3 className="text-2xl font-serif font-black text-foreground leading-none">{selectedAsset.name}</h3>
+                                                    <span className="text-[9px] font-black px-2.5 py-1 bg-primary text-white rounded-lg uppercase tracking-[0.2em] leading-none mb-0.5">{selectedAsset.asset_code}</span>
+                                                </div>
+                                                <p className="text-[10px] font-bold text-muted-foreground/50 mt-1 uppercase tracking-widest italic">{selectedAsset.location} • {selectedAsset.school_name || 'District Campus'}</p>
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <p className="text-xl font-serif font-black text-foreground">Initiate Optics</p>
-                                            <p className="text-xs font-bold text-muted-foreground tracking-tight opacity-40">Tap to capture or upload evidence</p>
-                                        </div>
-                                        <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-50 text-[10px] font-black text-muted-foreground/60 rounded-full uppercase tracking-widest border border-border">
-                                            <Upload className="w-3.5 h-3.5" /> 10MB Threshold
-                                        </div>
-                                    </div>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => setSelectedAsset(null)} 
+                                            className="text-muted-foreground/30 hover:text-rose-600 hover:bg-white rounded-2xl w-12 h-12 transition-all"
+                                        >
+                                            <X className="w-5 h-5" />
+                                        </Button>
+                                    </motion.div>
                                 )}
                             </AnimatePresence>
                         </div>
-                        <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhoto} />
-                        
-                        <div className="p-6 rounded-2xl bg-slate-50 border border-border flex gap-4">
-                            <AlertTriangle className="w-5 h-5 text-primary shrink-0" />
-                            <p className="text-xs font-medium text-muted-foreground leading-relaxed opacity-80 mt-0.5 italic">
-                                Clear, high-resolution documentation accelerates the diagnostic phase and material procurement efficiency.
-                            </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 ml-1 italic">Tactical Urgency</Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {['Low', 'Medium', 'High', 'Critical'].map(level => {
+                                        const active = form.priority === level;
+                                        return (
+                                            <button
+                                                key={level}
+                                                onClick={() => setForm({...form, priority: level})}
+                                                className={cn(
+                                                    "h-12 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 border",
+                                                    active 
+                                                        ? (level === 'Critical' ? 'bg-rose-600 border-rose-600 text-white shadow-lg shadow-rose-200' : 'bg-primary border-primary text-white shadow-lg shadow-primary/10')
+                                                        : 'bg-slate-50 border-transparent text-muted-foreground/40 hover:bg-slate-100'
+                                                )}
+                                            >
+                                                {level}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 ml-1 italic">Protocol Logic</Label>
+                                <div className={cn(
+                                    "p-4 rounded-2xl border transition-all h-12 flex items-center justify-center",
+                                    form.priority === 'Critical' ? "bg-rose-50 border-rose-100" : "bg-slate-50 border-transparent"
+                                )}>
+                                    <p className={cn(
+                                        "text-[10px] font-black uppercase tracking-widest",
+                                        form.priority === 'Critical' ? "text-rose-600" : "text-muted-foreground/40"
+                                    )}>
+                                        {form.priority === 'Critical' ? "Emergency Trigger Mode" : "Standard Cycle"}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
 
-                {/* RIGHT COLUMN: Formal Registry */}
-                <div className="lg:col-span-12 xl:col-span-7 space-y-10">
-                    
-                    {/* Step 2: Asset Identification */}
-                    <div className="space-y-4">
-                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Asset Identity</Label>
-                        
-                        <AnimatePresence mode="wait">
-                            {!selectedAsset ? (
-                                <motion.div 
-                                    key="search"
-                                    initial={{ opacity: 0, x: 10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -10 }}
-                                    className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-6"
-                                >
-                                    <div className="flex gap-3">
-                                        <div className="relative flex-1 group">
-                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                                            <Input 
-                                                placeholder="Search registry by name or operational code..." 
-                                                className="pl-12 h-14 rounded-xl bg-slate-50 border-none font-bold placeholder:font-medium text-sm" 
-                                                value={assetSearch} 
-                                                onChange={e => setAssetSearch(e.target.value)} 
-                                            />
-                                        </div>
-                                        <Button 
-                                            variant="outline" 
-                                            onClick={() => setShowQR(!showQR)} 
-                                            className={cn(
-                                                "h-14 w-14 rounded-xl shrink-0 transition-all p-0 border-border",
-                                                showQR ? "bg-primary border-primary text-white shadow-lg shadow-primary/10" : "hover:bg-slate-50"
-                                            )}
-                                        >
-                                            <QrCode className="w-5 h-5" />
-                                        </Button>
-                                    </div>
-
-                                    <div className="space-y-1 max-h-72 overflow-y-auto pr-2 custom-scrollbar">
-                                        {filteredAssets.length === 0 ? (
-                                            <div className="text-center py-12 opacity-40 flex flex-col items-center italic">
-                                                <Package className="w-10 h-10 mb-3 text-muted-foreground" />
-                                                <p className="text-xs font-bold">No assets found in registry</p>
-                                            </div>
-                                        ) : (
-                                            filteredAssets.map(asset => (
-                                                <div
-                                                    key={asset.id}
-                                                    onClick={() => setSelectedAsset(asset)}
-                                                    className="flex items-center gap-4 p-4 rounded-xl border border-transparent hover:border-border hover:bg-slate-50 cursor-pointer transition-all duration-300 group"
-                                                >
-                                                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground group-hover:bg-white group-hover:text-primary shadow-sm transition-all flex-shrink-0">
-                                                        <Package className="w-5 h-5" />
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-serif font-black text-foreground truncate">{asset.name}</p>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">{asset.asset_code}</span>
-                                                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase">• {asset.location}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </motion.div>
-                            ) : (
-                                <motion.div 
-                                    key="selected"
-                                    initial={{ opacity: 0, scale: 0.98 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="bg-primary/5 rounded-2xl border border-primary/20 p-6 shadow-sm flex items-center justify-between group"
-                                >
-                                    <div className="flex items-center gap-5">
-                                        <div className="w-14 h-14 rounded-xl bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/10 transition-transform group-hover:rotate-1">
-                                            <Package className="w-7 h-7" />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-3">
-                                                <h3 className="text-xl font-serif font-black text-foreground leading-none">{selectedAsset.name}</h3>
-                                                <span className="text-[9px] font-black px-2.5 py-1 bg-primary text-white rounded-lg uppercase tracking-[0.2em] leading-none mb-0.5">{selectedAsset.asset_code}</span>
-                                            </div>
-                                            <p className="text-[10px] font-bold text-muted-foreground/50 mt-1 uppercase tracking-widest">{selectedAsset.location} • {selectedAsset.school_name || 'District'}</p>
-                                        </div>
-                                    </div>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        onClick={() => setSelectedAsset(null)} 
-                                        className="text-muted-foreground/30 hover:text-rose-600 hover:bg-white rounded-xl w-12 h-12 transition-all"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </Button>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-
-                    {/* Step 3: Logistics Details */}
-                    <div className="bg-white rounded-2xl border border-border p-8 shadow-sm space-y-8">
-                        <div className="space-y-4">
-                            <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Damage Diagnostics</Label>
-                            <Textarea
-                                rows={6}
-                                placeholder="Describe the physical state, symptoms, and impact... (e.g. Structural fracture in base, persistent performance degradation)"
-                                className="resize-none rounded-xl bg-slate-50 border-none font-bold text-sm p-6 placeholder:font-medium placeholder:text-muted-foreground/30 focus-visible:ring-1 focus-visible:ring-primary/20 transition-all focus-visible:bg-white"
-                                value={form.description}
-                                onChange={e => setForm({ ...form, description: e.target.value })}
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 ml-1 italic">Damage Narrative</Label>
+                            <Textarea 
+                                rows={6} 
+                                value={form.description} 
+                                onChange={e => setForm({ ...form, description: e.target.value })} 
+                                placeholder="Log specific logistics constraints, physical anomalies, or operational failures encountered..." 
+                                className="resize-none rounded-[2rem] bg-slate-50 border-transparent font-bold text-sm p-8 placeholder:font-medium placeholder:text-muted-foreground/30 focus-visible:ring-1 focus-visible:ring-primary/20 focus-visible:bg-white transition-all shadow-inner"
                             />
                         </div>
 
-                        <div className="space-y-6">
-                            <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Logistics Priority</Label>
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                {['Low', 'Medium', 'High', 'Critical'].map(level => {
-                                    const active = form.priority === level;
-                                    return (
-                                        <button
-                                            key={level}
-                                            onClick={() => setForm({...form, priority: level})}
-                                            className={cn(
-                                                "h-11 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 border",
-                                                active 
-                                                    ? (level === 'Critical' ? 'bg-rose-600 border-rose-600 text-white shadow-md' : 'bg-primary border-primary text-white shadow-md')
-                                                    : 'bg-slate-50 border-border text-muted-foreground/60 hover:border-border hover:bg-slate-100'
-                                            )}
-                                        >
-                                            {level}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            {form.priority === 'Critical' && (
-                                <motion.div 
-                                    initial={{ opacity: 0, y: 5 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="flex items-center gap-3 text-rose-600 bg-rose-50 p-4 rounded-xl border border-rose-100 transition-all"
-                                >
-                                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                                    <p className="text-[10px] font-bold tracking-tight uppercase leading-relaxed">Emergency Protocol: High-level tactical administration will be alerted via sync-pipeline immediately.</p>
-                                </motion.div>
-                            )}
+                        <div className="flex flex-col gap-4 pt-6">
+                            <Button 
+                                onClick={handleSubmit} 
+                                disabled={submitting || !selectedAsset || !form.description} 
+                                className="h-20 bg-primary hover:bg-primary/95 text-white font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-primary/30 transition-all active:scale-[0.98] group/btn text-[10px]"
+                            >
+                                {submitting ? (
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                        SYNCHRONIZING PROTOCOL...
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-3">
+                                        <ArrowUpCircle className="w-6 h-6 group-hover:translate-y-[-2px] transition-transform" />
+                                        FINALIZE & DISPATCH REGISTRY
+                                    </div>
+                                )}
+                            </Button>
+                            <p className="text-center text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/20 italic">Authorizing personnel: {currentUser?.full_name || 'Protocol Unknown'}</p>
                         </div>
                     </div>
-
-                    {/* Final Submission */}
-                    <div className="flex flex-col gap-4">
-                        <Button 
-                            onClick={handleSubmit} 
-                            disabled={submitting || !selectedAsset || !form.description} 
-                            className="w-full h-16 bg-primary hover:bg-primary/95 text-primary-foreground font-black rounded-2xl shadow-xl shadow-primary/10 transition-all active:scale-[0.98] disabled:grayscale disabled:opacity-40"
-                        >
-                            {submitting ? (
-                                <span className="w-6 h-6 border-3 border-white/20 border-t-white rounded-full animate-spin" />
-                            ) : (
-                                <div className="flex items-center gap-3 uppercase tracking-[0.3em] text-sm">
-                                    <Shield className="w-5 h-5" /> 
-                                    Synchronize Report
-                                </div>
-                            )}
-                        </Button>
-                        <p className="text-[9px] text-center font-bold text-muted-foreground/40 uppercase tracking-[0.2em] italic">
-                            {(!selectedAsset || !form.description) ? "Required data fields pending" : "Secure operational transmission active"}
-                        </p>
-                    </div>
-                </div>
+                </motion.div>
             </div>
         </div>
     );
 }
-    );
-}
 
-function Shield({ className }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>
-    )
-}
+
+
