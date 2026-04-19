@@ -101,23 +101,26 @@ export default function Tasks() {
             </div>
 
             {/* tactical Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {[
                     { label: 'Assigned', count: counts.Assigned, icon: Clock, color: 'text-amber-600 bg-amber-50' },
                     { label: 'In Operation', count: counts['In Progress'], icon: Wrench, color: 'text-blue-600 bg-blue-50' },
                     { label: 'Fulfilled', count: counts.Completed, icon: CheckCircle, color: 'text-primary bg-primary/5' },
-                ].map(({ label, count, icon: Icon, color }) => (
+                ].map(({ label, count, icon: Icon, color }, idx) => (
                     <motion.div 
-                        whileHover={{ y: -4 }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: idx * 0.1 }}
+                        whileHover={{ y: -8, scale: 1.02 }}
                         key={label} 
-                        className="bg-white rounded-2xl border border-border p-8 flex items-center justify-between shadow-sm transition-all"
+                        className="bg-white rounded-[2.5rem] border border-border p-10 flex items-center justify-between shadow-sm hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 group"
                     >
                         <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{label}</p>
-                            <p className="text-4xl font-serif font-black text-foreground">{count}</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 italic group-hover:text-primary/50 transition-colors">{label}</p>
+                            <p className="text-5xl font-serif font-black text-foreground">{count}</p>
                         </div>
-                        <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border border-transparent shadow-sm", color)}>
-                            <Icon className="w-6 h-6" />
+                        <div className={cn("w-20 h-20 rounded-3xl flex items-center justify-center border border-transparent shadow-inner group-hover:scale-110 transition-transform duration-500", color)}>
+                            <Icon className="w-10 h-10" />
                         </div>
                     </motion.div>
                 ))}
@@ -144,51 +147,52 @@ export default function Tasks() {
                     <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {displayed.length === 0 ? (
-                        <div className="col-span-full text-center py-40 bg-slate-50 rounded-2xl border border-dashed border-border flex flex-col items-center justify-center">
-                            <Wrench className="w-16 h-16 mb-4 text-muted-foreground opacity-20" />
-                            <h3 className="text-xl font-serif font-black text-foreground">Workshop Static</h3>
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-1 text-muted-foreground opacity-60">Zero active service orders encountered</p>
+                        <div className="col-span-full text-center py-40 bg-slate-50/50 rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center">
+                            <Wrench className="w-20 h-20 mb-6 text-muted-foreground opacity-20" />
+                            <h3 className="text-2xl font-serif font-black text-foreground">Workshop <span className="text-primary italic">Static</span></h3>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-2 text-muted-foreground opacity-40 italic">Zero active service orders encountered</p>
                         </div>
                     ) : displayed.map((task, idx) => (
                         <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.02 }}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.2 + (idx * 0.05) }}
                             key={task.id}
                             onClick={() => openTask(task)}
-                            className="group relative flex flex-col bg-white rounded-2xl p-8 transition-all duration-300 border border-transparent hover:border-border hover:bg-slate-50/50 cursor-pointer shadow-sm hover:shadow-md"
+                            className="group relative flex flex-col bg-white rounded-[2.5rem] p-10 transition-all duration-500 border border-border hover:border-primary/20 hover:bg-white cursor-pointer shadow-sm hover:shadow-2xl hover:shadow-primary/5 active:scale-[0.98]"
                         >
-                            <div className="flex items-start justify-between mb-8">
-                                <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground group-hover:bg-white group-hover:text-primary transition-all duration-300 shadow-sm border border-transparent group-hover:border-border">
-                                    <Wrench className="w-7 h-7 group-hover:rotate-45 transition-transform" />
+                            <div className="flex items-start justify-between mb-10">
+                                <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-border flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-500 shadow-sm">
+                                    <Wrench className="w-8 h-8 group-hover:rotate-45 transition-transform duration-500" />
                                 </div>
-                                <div className="flex flex-col items-end gap-2">
+                                <div className="flex flex-col items-end gap-3">
                                     <StatusBadge status={task.priority || 'Medium'} size="sm" />
                                     <StatusBadge status={task.status} size="sm" />
                                 </div>
                             </div>
-                            <div className="space-y-3">
-                                <h3 className="text-2xl font-serif font-black text-foreground tracking-tight group-hover:text-primary transition-colors leading-tight">{task.asset_name}</h3>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-primary px-2.5 py-1 bg-primary/5 rounded-lg border border-primary/10 uppercase tracking-widest">{task.request_number || 'PENDING'}</span>
-                                    <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest truncate max-w-[200px] italic">• {task.school_name}</span>
+                            <div className="space-y-4">
+                                <h3 className="text-3xl font-serif font-black text-foreground tracking-tight group-hover:text-primary transition-colors leading-[1.1]">{task.asset_name}</h3>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-[9px] font-black text-primary px-3 py-1.5 bg-primary/5 rounded-xl border border-primary/10 uppercase tracking-[0.2em]">{task.request_number || 'REGISTRY PENDING'}</span>
+                                    <div className="h-1 w-1 rounded-full bg-slate-300" />
+                                    <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest truncate max-w-[200px] italic">{task.school_name || 'Operational Zone'}</span>
                                 </div>
                                 {task.notes && (
-                                    <div className="mt-6 p-5 rounded-xl bg-slate-50 italic text-[11px] font-medium text-muted-foreground/70 leading-relaxed border border-border line-clamp-2">
+                                    <div className="mt-8 p-6 rounded-[1.5rem] bg-slate-50/50 italic text-[11px] font-medium text-muted-foreground/70 leading-relaxed border border-border group-hover:bg-white transition-colors duration-500 line-clamp-2">
                                         "{task.notes}"
                                     </div>
                                 )}
                             </div>
-                            <div className="flex items-center justify-between mt-10 pt-6 border-t border-border">
-                                <div className="flex items-center gap-2 text-muted-foreground/40">
-                                    <Clock className="w-3.5 h-3.5" />
+                            <div className="flex items-center justify-between mt-12 pt-8 border-t border-border/50">
+                                <div className="flex items-center gap-2.5 text-muted-foreground/30">
+                                    <Clock className="w-4 h-4" />
                                     <span className="text-[9px] font-black uppercase tracking-[0.2em]">
                                         {task.created_date ? format(new Date(task.created_date), 'MMM d, yyyy') : 'Recently Logged'}
                                     </span>
                                 </div>
-                                <div className="text-[9px] font-black text-primary uppercase tracking-[0.3em] opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 transition-all duration-300 italic">
+                                <div className="text-[9px] font-black text-primary uppercase tracking-[0.3em] opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-500 italic">
                                     Execute Protocol →
                                 </div>
                             </div>
