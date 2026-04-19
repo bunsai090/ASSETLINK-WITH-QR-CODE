@@ -191,211 +191,241 @@ export default function Assets() {
         }
     }
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: { type: 'spring', stiffness: 300, damping: 24 }
+        }
+    };
+
     return (
-        <div className="space-y-10 animate-fade-in pb-20">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-12 pb-20 relative z-10"
+        >
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="space-y-1">
-                    <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground tracking-tight">
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+                <div className="space-y-1.5 translate-y-2">
+                    <h1 className="text-4xl md:text-6xl font-serif font-black text-foreground tracking-tighter leading-[1] mb-2 text-balance">
                         Inventory <span className="text-primary italic">Control</span>
                     </h1>
-                    <p className="text-muted-foreground text-lg max-w-2xl font-medium tracking-tight opacity-80">
-                        {assets.length} items registered across the campus ecosystem.
+                    <p className="text-muted-foreground text-lg max-w-2xl font-medium tracking-tight opacity-70">
+                        {assets.length} architectural units registered across the campus ecosystem.
                     </p>
                 </div>
-                <div className="flex flex-wrap gap-3 shrink-0">
+                <div className="flex flex-wrap gap-4 shrink-0">
                     {selectMode && selected.size > 0 && (
-                        <Button onClick={handleOpenQrTab} variant="outline" className="h-12 border-primary/20 text-primary font-bold rounded-2xl gap-2 px-6 shadow-xl shadow-primary/5">
-                            <Printer className="w-4 h-4" /> {`Export Selected (${selected.size})`}
+                        <Button onClick={handleOpenQrTab} variant="outline" className="h-16 px-8 rounded-[1.25rem] border-primary/20 text-primary font-bold gap-2 shadow-xl shadow-primary/5 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                            <Printer className="w-5 h-5" /> {`Export Labels (${selected.size})`}
                         </Button>
                     )}
                     {(role === 'admin' || role === 'principal' || role === 'supervisor') && (
-                        <Button onClick={() => { setSelectMode(s => !s); setSelected(new Set()); }} variant={selectMode ? 'secondary' : 'outline'} className="h-12 rounded-2xl gap-2 px-6 font-bold transition-all border-border hover:border-primary/20">
-                            <QrCode className="w-4 h-4" /> {selectMode ? 'Dismiss Labels' : 'Print Labels'}
+                        <Button onClick={() => { setSelectMode(s => !s); setSelected(new Set()); }} variant={selectMode ? 'secondary' : 'outline'} className="h-16 rounded-[1.25rem] gap-3 px-8 font-bold transition-all border-border hover:border-primary/20 hover:scale-[1.02] active:scale-[0.98]">
+                            <QrCode className="w-5 h-5" /> {selectMode ? 'Dismiss Labels' : 'Batch Labels'}
                         </Button>
                     )}
                     {(role === 'admin' || role === 'principal' || role === 'supervisor') && (
-                        <Button onClick={openCreate} className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-2xl gap-2 px-8 shadow-xl shadow-primary/20">
-                            <Plus className="w-5 h-5" /> New Registration
+                        <Button onClick={openCreate} className="h-16 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-[1.25rem] gap-3 px-10 shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                            <Plus className="w-6 h-6" /> New Registration
                         </Button>
                     )}
                 </div>
-            </div>
+            </motion.div>
 
             {/* Select All Bar */}
             <AnimatePresence>
                 {selectMode && (
                     <motion.div 
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="flex items-center gap-4 bg-primary/[0.03] border border-primary/10 rounded-3xl px-6 py-4 text-sm"
+                        initial={{ opacity: 0, scale: 0.98, y: -10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.98, y: -10 }}
+                        className="flex items-center gap-6 bg-primary/[0.03] border border-primary/10 rounded-[2rem] px-8 py-5 text-sm"
                     >
-                        <button onClick={toggleSelectAll} className="flex items-center gap-2 text-primary font-black hover:opacity-80 uppercase tracking-tighter transition-all">
-                            {selected.size === filtered.length ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
-                            {selected.size === filtered.length ? 'Deselect Range' : 'Select Full Range'}
+                        <button onClick={toggleSelectAll} className="flex items-center gap-3 text-primary font-black hover:opacity-80 uppercase tracking-tighter transition-all">
+                            {selected.size === filtered.length ? <CheckSquare className="w-6 h-6" /> : <Square className="w-6 h-6" />}
+                            {selected.size === filtered.length ? 'Deselect Universe' : 'Select Visible Universe'}
                         </button>
-                        <div className="w-1 h-1 rounded-full bg-primary/20" />
-                        <span className="text-muted-foreground font-bold tracking-tight uppercase text-[10px]">{selected.size} specific units selected</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary/20" />
+                        <span className="text-muted-foreground font-black uppercase text-[10px] tracking-[0.1em] opacity-60">{selected.size} architectural units staged</span>
                     </motion.div>
                 )}
             </AnimatePresence>
 
             {/* Filters Bar */}
-            <div className="flex flex-col md:flex-row gap-4 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-4 rounded-[2rem] border border-white dark:border-white/5 shadow-sm">
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-6 p-2 bg-border/20 rounded-[2.5rem] border border-border/40 overflow-hidden shadow-sm backdrop-blur-3xl">
                 <div className="relative flex-1 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <Search className="absolute left-7 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-all scale-100 group-focus-within:scale-110" />
                     <Input 
-                        placeholder="Search registry by name, serial, or code..." 
-                        className="pl-11 h-12 bg-transparent border-none ring-0 focus-visible:ring-0 text-foreground font-medium placeholder:text-muted-foreground/50" 
+                        placeholder="Search registry by name, serial, or taxonomy..." 
+                        className="pl-16 h-16 bg-transparent border-none ring-0 focus-visible:ring-0 text-foreground font-bold text-lg placeholder:text-muted-foreground/30 placeholder:font-medium tracking-tight" 
                         value={search} 
                         onChange={e => setSearch(e.target.value)} 
                     />
                 </div>
-                <div className="flex gap-4">
+                <div className="flex gap-4 p-2">
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
-                        <SelectTrigger className="w-full md:w-56 h-12 bg-white/50 dark:bg-slate-800/50 rounded-2xl border-white dark:border-white/5 shadow-sm font-bold text-xs uppercase tracking-widest px-6">
+                        <SelectTrigger className="w-full md:w-64 h-12 bg-white rounded-[1.25rem] border-border shadow-sm font-black text-[10px] uppercase tracking-[0.2em] px-8 hover:border-primary/40 transition-all">
                             <SelectValue placeholder="All Categories" />
                         </SelectTrigger>
-                        <SelectContent className="rounded-2xl">
-                            <SelectItem value="all">Comprehensive View</SelectItem>
-                            {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        <SelectContent className="rounded-[1.5rem] border-border p-2">
+                            <SelectItem value="all" className="rounded-xl font-bold uppercase text-[9px] tracking-widest">Comprehensive View</SelectItem>
+                            {CATEGORIES.map(c => <SelectItem key={c} value={c} className="rounded-xl font-bold uppercase text-[9px] tracking-widest">{c}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
-            </div>
+            </motion.div>
 
             {loading ? (
-                <div className="flex justify-center py-40">
-                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                <div className="flex justify-center py-60">
+                    <div className="w-16 h-16 border-8 border-primary/10 border-t-primary rounded-full animate-spin" />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filtered.length === 0 ? (
-                        <div className="col-span-full text-center py-40 bg-white/30 dark:bg-slate-900/20 rounded-[3rem] border border-dashed border-border/60 flex flex-col items-center justify-center grayscale opacity-40">
-                            <Package className="w-20 h-20 mb-6" />
-                            <h3 className="text-2xl font-serif font-bold text-foreground">Registry Empty</h3>
-                            <p className="text-xs font-black uppercase tracking-[0.3em] mt-2">Zero matching data points</p>
+                        <div className="col-span-full text-center py-60 bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-dashed border-border/40 flex flex-col items-center justify-center">
+                            <motion.div 
+                                animate={{ y: [0, -10, 0] }}
+                                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                            >
+                                <Package className="w-24 h-24 mb-8 text-muted-foreground opacity-20" />
+                            </motion.div>
+                            <h3 className="text-3xl font-serif font-black text-foreground tracking-tighter">Registry <span className="text-primary italic">Empty</span></h3>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-3 opacity-40">Zero matching data points detected</p>
                         </div>
-                    ) : filtered.map((asset, idx) => (
+                    ) : (filtered.map((asset, idx) => (
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: idx * 0.02 }}
+                            variants={itemVariants}
+                            whileHover={{ y: -8, transition: { duration: 0.2 } }}
                             key={asset.id}
                             onClick={selectMode ? () => toggleSelect(asset.id) : undefined}
                             className={cn(
-                                "group relative flex flex-col bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] p-6 transition-all duration-500 border-2",
+                                "group relative flex flex-col bg-white rounded-[2.5rem] p-8 transition-all duration-500 border-2",
                                 selectMode ? "cursor-pointer" : "cursor-default",
                                 selectMode && selected.has(asset.id) 
-                                    ? "border-primary ring-4 ring-primary/5 bg-primary/5" 
-                                    : "border-transparent hover:border-primary/20 hover:shadow-2xl hover:shadow-black/5"
+                                    ? "border-primary ring-8 ring-primary/5 bg-primary/5 shadow-2xl" 
+                                    : "border-transparent hover:border-border hover:shadow-[0_20px_40px_-20px_rgba(0,0,0,0.1)] shadow-sm"
                             )}
                         >
-                            <div className="flex items-start justify-between mb-6">
+                            <div className="flex items-start justify-between mb-8">
                                 <div className="relative">
                                     <div className={cn(
-                                        "w-14 h-14 rounded-3xl flex items-center justify-center transition-all duration-500",
+                                        "w-16 h-16 rounded-[1.5rem] flex items-center justify-center transition-all duration-500",
                                         selectMode && selected.has(asset.id) 
-                                            ? "bg-primary text-white scale-110 rotate-3 shadow-lg shadow-primary/20" 
-                                            : "bg-secondary text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary group-hover:rotate-3"
+                                            ? "bg-primary text-white scale-110 rotate-3 shadow-2xl shadow-primary/40" 
+                                            : "bg-border/20 text-muted-foreground group-hover:bg-primary group-hover:text-white group-hover:rotate-6 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-primary/30 shadow-sm"
                                     )}>
-                                        <Package className="w-7 h-7" />
+                                        <Package className="w-8 h-8" />
                                     </div>
                                     {selectMode && (
                                         <div className={cn(
-                                            "absolute -top-1 -right-1 w-6 h-6 rounded-full border-2 flex items-center justify-center shadow-lg transition-all",
-                                            selected.has(asset.id) ? "bg-primary border-primary scale-110" : "bg-white border-slate-200"
+                                            "absolute -top-2 -right-2 w-8 h-8 rounded-full border-4 flex items-center justify-center shadow-2xl transition-all",
+                                            selected.has(asset.id) ? "bg-primary border-white scale-110" : "bg-white border-border"
                                         )}>
-                                            {selected.has(asset.id) && <span className="text-white text-[10px] font-black italic">✓</span>}
+                                            {selected.has(asset.id) && <span className="text-white text-[12px] font-black italic">✓</span>}
                                         </div>
                                     )}
                                 </div>
                                 {!selectMode && (role === 'admin' || role === 'principal') && (
-                                    <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                                        <button onClick={(e) => { e.stopPropagation(); openEdit(asset); }} className="p-2.5 rounded-xl bg-white border border-border text-muted-foreground hover:text-primary hover:border-primary shadow-sm transition-all active:scale-90">
-                                            <Edit2 className="w-4 h-4" />
+                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 translate-y-3 group-hover:translate-y-0 transition-all duration-300">
+                                        <button onClick={(e) => { e.stopPropagation(); openEdit(asset); }} className="p-3 rounded-2xl bg-white border border-border text-muted-foreground hover:text-primary hover:border-primary hover:scale-110 shadow-sm transition-all active:scale-95">
+                                            <Edit2 className="w-5 h-5" />
                                         </button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDelete(asset.id); }} className="p-2.5 rounded-xl bg-white border border-border text-muted-foreground hover:text-rose-500 hover:border-rose-200 shadow-sm transition-all active:scale-90">
-                                            <Trash2 className="w-4 h-4" />
+                                        <button onClick={(e) => { e.stopPropagation(); handleDelete(asset.id); }} className="p-3 rounded-2xl bg-white border border-border text-muted-foreground hover:text-rose-500 hover:border-rose-200 hover:scale-110 shadow-sm transition-all active:scale-95">
+                                            <Trash2 className="w-5 h-5" />
                                         </button>
                                     </div>
                                 )}
                             </div>
-                            <div className="flex-1 space-y-2">
-                                <h3 className="font-serif font-black text-lg text-foreground leading-[1.1] truncate group-hover:text-primary transition-colors">{asset.name}</h3>
-                                <div className="flex flex-wrap items-center gap-2 overflow-hidden">
-                                    <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10 uppercase tracking-widest whitespace-nowrap">
+                            <div className="flex-1 space-y-3">
+                                <h3 className="font-serif font-black text-xl text-foreground leading-[1] truncate group-hover:text-primary transition-colors pr-2 tracking-tight">{asset.name}</h3>
+                                <div className="flex flex-wrap items-center gap-3 overflow-hidden">
+                                    <span className="text-[10px] font-black text-primary bg-primary/[0.07] px-3 py-1 rounded-full border border-primary/10 uppercase tracking-widest whitespace-nowrap">
                                         {asset.asset_code}
                                     </span>
                                     {asset.location && (
-                                        <span className="text-[11px] font-bold text-muted-foreground line-clamp-1 italic tracking-tight opacity-70">
+                                        <span className="text-[12px] font-bold text-muted-foreground line-clamp-1 italic tracking-tight opacity-50">
                                             {asset.location}
                                         </span>
                                     )}
                                 </div>
                             </div>
-                            <div className="flex flex-wrap gap-2 mt-8">
-                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 border border-slate-100 dark:border-white/5 rounded-full px-3 py-1">
+                            <div className="flex flex-wrap gap-2.5 mt-10">
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 border-2 border-border/30 rounded-full px-4 py-1.5 flex items-center">
                                     {asset.category}
                                 </span>
-                                {asset.condition && <StatusBadge status={asset.condition} />}
+                                {asset.condition && <div className="scale-90 origin-left"><StatusBadge status={asset.condition} /></div>}
                             </div>
                         </motion.div>
-                    ))}
-                </div>
+                    )))}
+                </motion.div>
             )}
 
             {/* Asset Modal */}
             <Dialog open={showModal} onOpenChange={setShowModal}>
-                <DialogContent className="sm:max-w-xl rounded-[2.5rem] border-none p-10 bg-white/95 backdrop-blur-2xl">
-                    <DialogHeader className="mb-8">
-                        <DialogTitle className="text-3xl font-serif font-bold tracking-tight">
+                <DialogContent className="sm:max-w-xl rounded-[3rem] border-none p-12 bg-white/95 backdrop-blur-3xl shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] ring-1 ring-black/5">
+                    <DialogHeader className="mb-10 text-left">
+                        <DialogTitle className="text-4xl font-serif font-black tracking-tighter">
                             {editing ? (
                                 <>Edit <span className="text-primary italic">Record</span></>
                             ) : (
                                 <>Register <span className="text-primary italic">Asset</span></>
                             )}
                         </DialogTitle>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-40 mt-2">Inventory lifecycle management protocol</p>
                     </DialogHeader>
-                    <div className="space-y-6">
-                        <div className="grid grid-cols-2 gap-6">
-                            <div className="col-span-2 space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Asset Identity</Label>
-                                <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Dell Smart Hub - Lab Alpha" className="h-14 rounded-2xl bg-secondary/30 border-none font-bold placeholder:font-medium" />
+                    <div className="space-y-8">
+                        <div className="grid grid-cols-2 gap-8">
+                            <div className="col-span-2 space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1 opacity-60">Asset Identity</Label>
+                                <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Dell Smart Hub - Lab Alpha" className="h-16 rounded-[1.25rem] bg-border/20 border-none font-black text-lg placeholder:font-medium placeholder:opacity-30 tracking-tight px-7 focus-visible:ring-2 focus-visible:ring-primary/20 transition-all" />
                             </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Serial / Code</Label>
-                                <Input value={form.asset_code} onChange={e => setForm({ ...form, asset_code: e.target.value })} placeholder="AL-001" className="h-14 rounded-2xl bg-secondary/30 border-none font-bold" />
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1 opacity-60">Serial / Code</Label>
+                                <Input value={form.asset_code} onChange={e => setForm({ ...form, asset_code: e.target.value })} placeholder="AL-001" className="h-16 rounded-[1.25rem] bg-border/20 border-none font-black tracking-widest px-7 focus-visible:ring-2 focus-visible:ring-primary/20" />
                             </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Tactical Category</Label>
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1 opacity-60">Taxonomy Category</Label>
                                 <Select value={form.category} onValueChange={v => setForm({ ...form, category: v })}>
-                                    <SelectTrigger className="h-14 rounded-2xl bg-secondary/30 border-none font-bold"><SelectValue /></SelectTrigger>
-                                    <SelectContent className="rounded-2xl">{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                                    <SelectTrigger className="h-16 rounded-[1.25rem] bg-border/20 border-none font-black px-7 uppercase tracking-widest text-[11px] focus-visible:ring-2 focus-visible:ring-primary/20"><SelectValue /></SelectTrigger>
+                                    <SelectContent className="rounded-2xl">{CATEGORIES.map(c => <SelectItem key={c} value={c} className="font-bold uppercase tracking-widest text-[10px]">{c}</SelectItem>)}</SelectContent>
                                 </Select>
                             </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Current State</Label>
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1 opacity-60">Unit Status</Label>
                                 <Select value={form.condition} onValueChange={v => setForm({ ...form, condition: v })}>
-                                    <SelectTrigger className="h-14 rounded-2xl bg-secondary/30 border-none font-bold"><SelectValue /></SelectTrigger>
-                                    <SelectContent className="rounded-2xl">{CONDITIONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                                    <SelectTrigger className="h-16 rounded-[1.25rem] bg-border/20 border-none font-black px-7 uppercase tracking-widest text-[11px]"><SelectValue /></SelectTrigger>
+                                    <SelectContent className="rounded-2xl">{CONDITIONS.map(c => <SelectItem key={c} value={c} className="font-bold uppercase tracking-widest text-[10px]">{c}</SelectItem>)}</SelectContent>
                                 </Select>
                             </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Precise Location</Label>
-                                <Input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Faculty Wing - Rm 3" className="h-14 rounded-2xl bg-secondary/30 border-none font-bold" />
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1 opacity-60">Precise Location</Label>
+                                <Input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Rooms, Wings, Floors..." className="h-16 rounded-[1.25rem] bg-border/20 border-none font-black px-7" />
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-3 mt-10">
-                        <Button onClick={handleSave} disabled={saving} className="h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95 text-sm">
-                            {saving ? 'Synchronizing...' : (editing ? 'Submit Changes' : 'Execute Registration')}
+                    <div className="flex flex-col gap-4 mt-12">
+                        <Button onClick={handleSave} disabled={saving} className="h-20 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-[0.2em] rounded-[1.5rem] shadow-2xl shadow-primary/40 transition-all hover:scale-[1.02] active:scale-[0.98] text-lg">
+                            {saving ? 'Synchronizing Intelligence...' : (editing ? 'Apply Amendments' : 'Execute Registration')}
                         </Button>
-                        <Button variant="ghost" onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground font-bold uppercase text-[10px] tracking-widest">Abort Process</Button>
+                        <Button variant="ghost" onClick={() => setShowModal(false)} className="h-12 text-muted-foreground hover:text-foreground font-black uppercase text-[10px] tracking-[0.3em] opacity-40 hover:opacity-100 transition-all">Terminate Process</Button>
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+        </motion.div>
     );
 }

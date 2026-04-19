@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
@@ -74,29 +74,66 @@ export default function Analytics() {
         const dateStr = format(d, 'yyyy-MM-dd');
         return {
             date: format(d, 'MMM d'),
-            requests: requests.filter(r => r.created_at?.toDate && format(r.created_at.toDate(), 'yyyy-MM-dd') === dateStr).length,
-            completed: requests.filter(r => r.completed_at?.toDate && format(r.completed_at.toDate(), 'yyyy-MM-dd') === dateStr).length,
+            requests: requests.filter(r => {
+                const date = r.created_at?.toDate ? r.created_at.toDate() : (r.created_at ? new Date(r.created_at) : null);
+                return date && format(date, 'yyyy-MM-dd') === dateStr;
+            }).length,
+            completed: requests.filter(r => {
+                const date = r.completed_at?.toDate ? r.completed_at.toDate() : (r.completed_at ? new Date(r.completed_at) : null);
+                return date && format(date, 'yyyy-MM-dd') === dateStr;
+            }).length,
         };
     });
 
     const avgResolutionTime = (() => {
-        const completedRes = requests.filter(r => r.status === 'Completed' && r.created_at?.toDate && r.completed_at?.toDate);
+        const completedRes = requests.filter(r => r.status === 'Completed' && (r.created_at?.toDate || r.created_at) && (r.completed_at?.toDate || r.completed_at));
         if (!completedRes.length) return 0;
         const avg = completedRes.reduce((sum, r) => {
-            const diff = r.completed_at.toDate().getTime() - r.created_at.toDate().getTime();
+            const start = r.created_at?.toDate ? r.created_at.toDate().getTime() : new Date(r.created_at).getTime();
+            const end = r.completed_at?.toDate ? r.completed_at.toDate().getTime() : new Date(r.completed_at).getTime();
+            const diff = end - start;
             return sum + diff / (1000 * 60 * 60 * 24);
         }, 0) / completedRes.length;
         return Math.round(avg);
     })();
 
     if (loading) {
-        return <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-teal/30 border-t-teal rounded-full animate-spin" /></div>;
+        return (
+            <div className="flex flex-col items-center justify-center py-40 gap-4">
+                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 italic">Synthesizing Institutional Data...</p>
+            </div>
+        );
     }
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: { type: 'spring', stiffness: 300, damping: 24 }
+        }
+    };
+
     return (
-        <div className="space-y-12 animate-fade-in pb-20 relative z-10 font-sans">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-12 pb-20 relative z-10 font-sans"
+        >
             {/* Header Area */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                 <div className="space-y-1.5">
                     <h1 className="text-4xl md:text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1]">
                         Institutional <span className="text-primary italic">Intelligence</span>
@@ -108,20 +145,17 @@ export default function Analytics() {
                 <Button variant="outline" className="h-14 px-8 rounded-2xl border-border bg-white hover:bg-slate-50 text-[10px] font-black uppercase tracking-[0.2em] shadow-sm transition-all active:scale-[0.98]">
                     <Download className="w-4 h-4 mr-3 text-primary" /> Export Intelligence Report
                 </Button>
-            </div>
+            </motion.div>
 
             {/* Tactical Metrics Hub */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
                     { label: 'Universal Inflow', val: requests.length, icon: BarChart3, color: 'text-primary' },
                     { label: 'Settlement Ratio', val: `${requests.length > 0 ? Math.round((requests.filter(r => r.status === 'Completed').length / requests.length) * 100) : 0}%`, icon: TrendingUp, color: 'text-emerald-600' },
                     { label: 'Velocity Index', val: `${avgResolutionTime}d`, icon: Activity, color: 'text-blue-600' },
                     { label: 'Escalation Potential', val: requests.filter(r => r.priority === 'Critical').length, icon: TrendingUp, color: 'text-rose-600' }
                 ].map((kpi, idx) => (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
+                    <div 
                         key={kpi.label} 
                         className="bg-white p-6 rounded-[2rem] border border-border shadow-sm flex flex-col gap-4 group hover:shadow-xl transition-all duration-500"
                     >
@@ -134,21 +168,37 @@ export default function Analytics() {
                                 <span className={cn("text-3xl font-serif font-black tracking-tighter", kpi.color)}>{kpi.val}</span>
                             </div>
                         </div>
-                    </motion.div>
+                    </div>
                 ))}
-            </div>
+            </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Status Allocation */}
-                <div className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm flex flex-col">
+                <motion.div 
+                    variants={itemVariants}
+                    whileInView={{ scale: [0.98, 1], opacity: 1 }}
+                    viewport={{ once: false, amount: 0.2 }}
+                    className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm flex flex-col"
+                >
                     <div className="mb-8">
                         <h3 className="text-xl font-serif font-black text-foreground">Status <span className="text-primary italic">Distribution</span></h3>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Operational Lifecycle Segmenting</p>
                     </div>
                     <div className="flex-1 flex items-center justify-center min-h-[300px]">
-                        <ResponsiveContainer width="100%" height={280}>
+                        <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
-                                <Pie data={statusData} cx="50%" cy="50%" innerRadius={75} outerRadius={95} paddingAngle={4} dataKey="value" stroke="none">
+                                <Pie 
+                                    data={statusData} 
+                                    cx="50%" 
+                                    cy="50%" 
+                                    innerRadius={75} 
+                                    outerRadius={95} 
+                                    paddingAngle={4} 
+                                    dataKey="value" 
+                                    stroke="none"
+                                    animationBegin={0}
+                                    animationDuration={1500}
+                                >
                                     {statusData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="focus:outline-none" />
                                     ))}
@@ -174,16 +224,21 @@ export default function Analytics() {
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Priority Distribution */}
-                <div className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm flex flex-col">
+                <motion.div 
+                    variants={itemVariants}
+                    whileInView={{ scale: [0.98, 1], opacity: 1 }}
+                    viewport={{ once: false, amount: 0.2 }}
+                    className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm flex flex-col"
+                >
                     <div className="mb-8">
                         <h3 className="text-xl font-serif font-black text-foreground">Critical <span className="text-primary italic">Density</span></h3>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Registry Priority Stratification</p>
                     </div>
                     <div className="flex-1 flex items-center justify-center min-h-[300px]">
-                        <ResponsiveContainer width="100%" height={280}>
+                        <ResponsiveContainer width="100%" height={300}>
                             <BarChart data={priorityData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis 
@@ -212,14 +267,19 @@ export default function Analytics() {
                                         fontFamily: 'Fraunces, serif'
                                     }} 
                                 />
-                                <Bar dataKey="value" fill="#054a29" radius={[12, 12, 4, 4]} barSize={40} />
+                                <Bar dataKey="value" fill="#054a29" radius={[12, 12, 4, 4]} barSize={40} animationDuration={2000} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Timeline Analysis */}
-                <div className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm lg:col-span-2">
+                <motion.div 
+                    variants={itemVariants}
+                    whileInView={{ scale: [0.98, 1], opacity: 1 }}
+                    viewport={{ once: false, amount: 0.2 }}
+                    className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm lg:col-span-2"
+                >
                     <div className="mb-8">
                         <h3 className="text-xl font-serif font-black text-foreground">Strategic <span className="text-primary italic">Velocity</span></h3>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">7-Day Distribution Inflow Metrics</p>
@@ -258,15 +318,20 @@ export default function Analytics() {
                                     iconType="circle"
                                     wrapperStyle={{ paddingBottom: '40px', fontSize: '10px', fontWeight: '800', letterSpacing: '1px' }}
                                 />
-                                <Line type="monotone" dataKey="requests" stroke="#054a29" strokeWidth={4} dot={{ r: 0 }} activeDot={{ r: 8, strokeWidth: 4, stroke: '#fff' }} name="Registry Inflow" />
-                                <Line type="monotone" dataKey="completed" stroke="#94a3b8" strokeWidth={4} strokeDasharray="8 6" dot={{ r: 0 }} activeDot={{ r: 8, strokeWidth: 4, stroke: '#fff' }} name="Resolution Output" />
+                                <Line type="monotone" dataKey="requests" stroke="#054a29" strokeWidth={4} dot={{ r: 0 }} activeDot={{ r: 8, strokeWidth: 4, stroke: '#fff' }} name="Registry Inflow" animationDuration={2000} />
+                                <Line type="monotone" dataKey="completed" stroke="#94a3b8" strokeWidth={4} strokeDasharray="8 6" dot={{ r: 0 }} activeDot={{ r: 8, strokeWidth: 4, stroke: '#fff' }} name="Resolution Output" animationDuration={2500} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Categorical Breakdown */}
-                <div className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm lg:col-span-2">
+                <motion.div 
+                    variants={itemVariants}
+                    whileInView={{ scale: [0.98, 1], opacity: 1 }}
+                    viewport={{ once: false, amount: 0.2 }}
+                    className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm lg:col-span-2"
+                >
                     <div className="mb-8">
                         <h3 className="text-xl font-serif font-black text-foreground">Asset <span className="text-primary italic">Allocation</span></h3>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Registry Volume vs Damage Frequency</p>
@@ -306,13 +371,13 @@ export default function Analytics() {
                                     iconType="circle"
                                     wrapperStyle={{ paddingBottom: '40px', fontSize: '10px', fontWeight: '800', letterSpacing: '1px' }}
                                 />
-                                <Bar dataKey="assets" fill="#054a29" radius={[12, 12, 0, 0]} barSize={24} name="Total Inventory" />
-                                <Bar dataKey="damaged" fill="#f59e0b" radius={[12, 12, 0, 0]} barSize={24} name="Damage Registry" />
+                                <Bar dataKey="assets" fill="#054a29" radius={[12, 12, 0, 0]} barSize={24} name="Total Inventory" animationDuration={2000} />
+                                <Bar dataKey="damaged" fill="#f59e0b" radius={[12, 12, 0, 0]} barSize={24} name="Damage Registry" animationDuration={2500} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </motion.div>
             </div>
-        </div>
+        </motion.div>
     );
 }

@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
-export default function StatsCard({ title, value, subtitle = '', icon: Icon, color = 'teal', trend = null }) {
+export default function StatsCard({ title, value, subtitle = '', icon: Icon, color = 'teal', trend = null, className = '' }) {
     const colorVariants = {
         teal: {
             bg: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/10',
@@ -41,7 +41,8 @@ export default function StatsCard({ title, value, subtitle = '', icon: Icon, col
         <motion.div 
             whileHover={{ y: -4 }}
             className={cn(
-                "relative group overflow-hidden bg-white rounded-2xl border border-border p-6 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-black/5"
+                "relative group overflow-hidden bg-white rounded-2xl border border-border p-6 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-black/5",
+                className
             )}
         >
             <div className="flex items-start gap-4">

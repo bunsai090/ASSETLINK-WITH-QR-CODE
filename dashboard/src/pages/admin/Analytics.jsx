@@ -91,126 +91,152 @@ export default function Analytics() {
         );
     }
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: { type: 'spring', stiffness: 300, damping: 24 }
+        }
+    };
+
     return (
-        <div className="space-y-10 animate-fade-in pb-20">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-12 pb-20 relative z-10"
+        >
              {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="space-y-1">
-                    <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground tracking-tight">
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+                <div className="space-y-1.5 translate-y-2">
+                    <h1 className="text-4xl md:text-6xl font-serif font-black text-foreground tracking-tighter leading-[1] mb-2 text-balance">
                         Operational <span className="text-primary italic">Intelligence</span>
                     </h1>
-                    <p className="text-muted-foreground text-lg max-w-2xl font-medium tracking-tight opacity-80">
-                        Real-time data synchronization and performance metrics for campus resource management.
+                    <p className="text-muted-foreground text-lg max-w-2xl font-medium tracking-tight opacity-70">
+                        Real-time data synchronization and restoration velocity metrics for high-fidelity campus management.
                     </p>
                 </div>
-                <Button size="lg" variant="outline" className="shrink-0 h-12 rounded-2xl border-primary/20 text-primary hover:bg-primary/5 gap-2 px-6 font-bold shadow-xl shadow-primary/5">
-                    <Download className="w-4 h-4" /> Generate Report
+                <Button size="lg" variant="outline" className="shrink-0 h-16 px-10 rounded-[1.25rem] border-primary/20 text-primary hover:bg-primary/5 gap-3 font-bold shadow-xl shadow-primary/5 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                    <Download className="w-5 h-5" /> Generate Report
                 </Button>
-            </div>
+            </motion.div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatsCard title="Pipeline" value={requests.length} subtitle="Total reports" icon={BarChart3} color="teal" />
+            <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatsCard title="Pipeline" value={requests.length} subtitle="Total restorations" icon={BarChart3} color="teal" />
                 <StatsCard title="Velocity" value={`${requests.length > 0 ? Math.round((requests.filter(r => r.status === 'Completed').length / requests.length) * 100) : 0}%`} subtitle="Completion rate" icon={TrendingUp} color="green" />
                 <StatsCard title="Resolution" value={`${avgResolutionTime}d`} subtitle="Average cycle time" icon={Activity} color="blue" />
                 <StatsCard title="Emergency" value={requests.filter(r => r.priority === 'Critical').length} subtitle="Critical alerts" icon={AlertTriangle} color="red" />
-            </div>
+            </motion.div>
 
             <div className="grid lg:grid-cols-2 gap-8">
                 {/* Status Chart Card */}
                 <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white dark:border-white/5 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                    variants={itemVariants}
+                    whileInView={{ scale: [0.98, 1], opacity: [0, 1] }}
+                    viewport={{ once: false, amount: 0.1 }}
+                    className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm relative overflow-hidden"
                 >
-                    <div className="mb-8">
-                        <h2 className="text-xl font-serif font-bold text-foreground">Status Distribution</h2>
-                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 mt-1">Lifecycle segmentation</p>
+                    <div className="mb-10 relative z-10">
+                        <h2 className="text-2xl font-serif font-black text-foreground tracking-tighter">Status <span className="text-primary italic">Distribution</span></h2>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Lifecycle segmentation protocols</p>
                     </div>
-                    <ResponsiveContainer width="100%" height={260}>
+                    <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
-                            <Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
+                            <Pie data={statusData} cx="50%" cy="50%" innerRadius={70} outerRadius={110} paddingAngle={8} dataKey="value" stroke="none">
                                 {statusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                             </Pie>
                             <Tooltip 
-                                contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} 
+                                contentStyle={{ borderRadius: '1.25rem', border: 'none', boxShadow: '0 20px 40px -10px rgb(0 0 0 / 0.1)', padding: '1rem' }} 
                             />
-                            <Legend iconType="circle" />
+                            <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
                         </PieChart>
                     </ResponsiveContainer>
                 </motion.div>
 
                 {/* Priority Chart Card */}
                 <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white dark:border-white/5 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                    variants={itemVariants}
+                    whileInView={{ scale: [0.98, 1], opacity: [0, 1] }}
+                    viewport={{ once: false, amount: 0.1 }}
+                    className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm relative overflow-hidden"
                 >
-                    <div className="mb-8">
-                        <h2 className="text-xl font-serif font-bold text-foreground">Priority Matrix</h2>
-                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 mt-1">Urgency classification</p>
+                    <div className="mb-10 relative z-10">
+                        <h2 className="text-2xl font-serif font-black text-foreground tracking-tighter">Priority <span className="text-primary italic">Matrix</span></h2>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Urgency classification telemetry</p>
                     </div>
-                    <ResponsiveContainer width="100%" height={260}>
-                        <BarChart data={priorityData} barSize={40}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-                            <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} contentStyle={{ borderRadius: '1rem', border: 'none' }} />
-                            <Bar dataKey="value" fill="#2dd4bf" radius={[10, 10, 0, 0]} />
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={priorityData} barSize={50}>
+                            <CartesianGrid strokeDasharray="6 6" vertical={false} stroke="rgba(0,0,0,0.03)" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: '900', fill: 'rgba(0,0,0,0.3)' }} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: '900', fill: 'rgba(0,0,0,0.2)' }} />
+                            <Tooltip cursor={{ fill: 'rgba(0,0,0,0.01)' }} contentStyle={{ borderRadius: '1.25rem', border: 'none', boxShadow: '0 20px 40px -10px rgb(0 0 0 / 0.1)' }} />
+                            <Bar dataKey="value" fill="#2dd4bf" radius={[8, 8, 8, 8]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </motion.div>
 
                 {/* Trend Chart Card */}
                 <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white dark:border-white/5 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                    variants={itemVariants}
+                    whileInView={{ scale: [0.98, 1], opacity: [0, 1] }}
+                    viewport={{ once: false, amount: 0.1 }}
+                    className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm relative overflow-hidden lg:col-span-2"
                 >
-                    <div className="mb-8">
-                        <h2 className="text-xl font-serif font-bold text-foreground">Operational Trend</h2>
-                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 mt-1">7-Day restoration cycle</p>
+                    <div className="mb-10 relative z-10">
+                        <h2 className="text-2xl font-serif font-black text-foreground tracking-tighter">Operational <span className="text-primary italic">Trend</span></h2>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">7-Day restoration cycle dynamics</p>
                     </div>
-                    <ResponsiveContainer width="100%" height={260}>
+                    <ResponsiveContainer width="100%" height={340}>
                         <LineChart data={last7}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-                            <Tooltip contentStyle={{ borderRadius: '1rem', border: 'none' }} />
-                            <Legend iconType="plainline" />
-                            <Line type="monotone" dataKey="requests" stroke="#2dd4bf" strokeWidth={4} dot={{ r: 6, fill: '#2dd4bf', strokeWidth: 0 }} activeDot={{ r: 8 }} name="Submitted" />
-                            <Line type="monotone" dataKey="completed" stroke="#10b981" strokeWidth={4} dot={{ r: 6, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 8 }} name="Restored" />
+                            <CartesianGrid strokeDasharray="6 6" vertical={false} stroke="rgba(0,0,0,0.03)" />
+                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: '900', fill: 'rgba(0,0,0,0.3)' }} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: '900', fill: 'rgba(0,0,0,0.2)' }} />
+                            <Tooltip contentStyle={{ borderRadius: '1.25rem', border: 'none', boxShadow: '0 20px 40px -10px rgb(0 0 0 / 0.1)' }} />
+                            <Legend iconType="plainline" wrapperStyle={{ paddingTop: '20px', fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
+                            <Line type="monotone" dataKey="requests" stroke="#2dd4bf" strokeWidth={5} dot={{ r: 6, fill: '#2dd4bf', strokeWidth: 0 }} activeDot={{ r: 10, stroke: '#fff', strokeWidth: 4 }} name="Submitted" />
+                            <Line type="monotone" dataKey="completed" stroke="#10b981" strokeWidth={5} dot={{ r: 6, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 10, stroke: '#fff', strokeWidth: 4 }} name="Restored" />
                         </LineChart>
                     </ResponsiveContainer>
                 </motion.div>
 
                 {/* Asset Categories Chart */}
                 <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white dark:border-white/5 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                    variants={itemVariants}
+                    whileInView={{ scale: [0.98, 1], opacity: [0, 1] }}
+                    viewport={{ once: false, amount: 0.1 }}
+                    className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm relative overflow-hidden lg:col-span-2"
                 >
-                    <div className="mb-8">
-                        <h2 className="text-xl font-serif font-bold text-foreground">Resource Taxonomy</h2>
-                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 mt-1">Inventory vulnerability by sector</p>
+                    <div className="mb-10 relative z-10">
+                        <h2 className="text-2xl font-serif font-black text-foreground tracking-tighter">Resource <span className="text-primary italic">Taxonomy</span></h2>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Inventory vulnerability by sector analytics</p>
                     </div>
-                    <ResponsiveContainer width="100%" height={260}>
-                        <BarChart data={categoryData} barSize={24} layout="vertical" margin={{ left: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(0,0,0,0.05)" />
+                    <ResponsiveContainer width="100%" height={340}>
+                        <BarChart data={categoryData} barSize={20} layout="vertical" margin={{ left: 40, right: 20 }}>
+                            <CartesianGrid strokeDasharray="6 6" horizontal={false} stroke="rgba(0,0,0,0.03)" />
                             <XAxis type="number" hide />
-                            <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold' }} width={80} />
-                            <Tooltip contentStyle={{ borderRadius: '1rem', border: 'none' }} />
-                            <Legend iconType="circle" />
-                            <Bar dataKey="assets" fill="#2dd4bf" radius={[0, 6, 6, 0]} name="Total Inventory" />
-                            <Bar dataKey="damaged" fill="#f59e0b" radius={[0, 6, 6, 0]} name="Incident Reports" />
+                            <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: '900', fill: 'rgba(0,0,0,0.3)' }} width={100} />
+                            <Tooltip contentStyle={{ borderRadius: '1.25rem', border: 'none', boxShadow: '0 20px 40px -10px rgb(0 0 0 / 0.1)' }} />
+                            <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
+                            <Bar dataKey="assets" fill="#2dd4bf" radius={[0, 8, 8, 0]} name="Total Inventory" />
+                            <Bar dataKey="damaged" fill="#f59e0b" radius={[0, 8, 8, 0]} name="Incident Reports" />
                         </BarChart>
                     </ResponsiveContainer>
                 </motion.div>
             </div>
-        </div>
+        </motion.div>
     );
 }
 

@@ -19,6 +19,7 @@ import DashboardPrincipal from './pages/principal/Dashboard';
 // Admin/System Pages
 import Assets from './pages/admin/Assets';
 import Analytics from './pages/admin/Analytics';
+import Schools from './pages/Schools';
 
 // Repair & Damage Pages
 import RepairRequestsTeacher from './pages/teacher/RepairRequests';
@@ -28,6 +29,10 @@ import RepairRequestsPrincipal from './pages/principal/RepairRequests';
 // Maintenance Pages
 import Tasks from './pages/maintenance/Tasks';
 import MaintenanceCalendar from './pages/maintenance/MaintenanceCalendar';
+
+// Supervisor Pages
+import DashboardSupervisor from './pages/supervisor/Dashboard';
+import SupervisorOversight from './pages/SupervisorOversight';
 
 // Public Pages
 import AssetPublic from './pages/public/AssetPublic';
@@ -69,6 +74,7 @@ const AuthenticatedApp = () => {
         if (role === 'maintenance') return <DashboardMaintenance />;
         if (role === 'principal') return <DashboardPrincipal />;
         if (role === 'admin') return <DashboardPrincipal />; // Admins see Principal dashboard for oversight
+        if (role === 'supervisor') return <DashboardSupervisor />;
         return <DashboardTeacher />; 
     };
 
@@ -93,6 +99,8 @@ const AuthenticatedApp = () => {
                 <Route path="/tasks" element={<Tasks />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/calendar" element={<MaintenanceCalendar />} />
+                <Route path="/schools" element={<Schools />} />
+                <Route path="/oversight" element={<SupervisorOversight />} />
                 <Route path="/asset-view" element={<AssetPublic />} />
                 <Route path="*" element={<PageNotFound />} />
             </Route>
