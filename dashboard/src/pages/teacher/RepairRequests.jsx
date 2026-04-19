@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { sileo } from 'sileo';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,7 +33,11 @@ export default function TeacherRepairRequests() {
         const unsubscribe = onSnapshot(
             collection(db, 'repair_requests'),
             (snapshot) => {
-                const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                const all = snapshot.docs.map(doc => {
+                    /** @type {any} */
+                    const data = doc.data();
+                    return { ...data, id: doc.id };
+                });
                 const teacherEmail = currentUser.email?.toLowerCase();
                 const teacherName = currentUser.full_name?.toLowerCase();
                 
@@ -48,8 +53,8 @@ export default function TeacherRepairRequests() {
                         return emailMatches || nameMatches || (needsVerification && schoolMatches);
                     })
                     .sort((a, b) => {
-                        const dateA = a.created_at?.toDate?.() ?? new Date(0);
-                        const dateB = b.created_at?.toDate?.() ?? new Date(0);
+                        const dateA = a.created_at?.toDate ? a.created_at.toDate() : new Date(0);
+                        const dateB = b.created_at?.toDate ? b.created_at.toDate() : new Date(0);
                         return dateB - dateA;
                     });
                 setRequests(mine);
@@ -146,10 +151,35 @@ export default function TeacherRepairRequests() {
         }
     }
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: { type: 'spring', stiffness: 300, damping: 24 }
+        }
+    };
+
     return (
-        <div className="space-y-12 animate-fade-in pb-20 relative z-10 font-sans">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-12 pb-20 relative z-10"
+        >
             {/* Header Area */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                 <div className="space-y-1.5">
                     <h1 className="text-4xl md:text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1]">
                         Restoration <span className="text-primary italic">Reports</span>
@@ -158,23 +188,23 @@ export default function TeacherRepairRequests() {
                         Tracking your submitted cases through the district restoration lifecycle.
                     </p>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Tactical Status Toggles */}
-            <div className="flex flex-col md:flex-row gap-4 bg-white p-2 rounded-2xl border border-border shadow-sm">
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-4 bg-white p-3 rounded-[1.5rem] border border-border shadow-sm">
                 <div className="relative flex-1 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
                     <Input 
                         placeholder="Scan reports by asset designation..." 
-                        className="pl-12 h-12 bg-transparent border-none ring-0 focus-visible:ring-0 text-sm font-medium placeholder:text-muted-foreground/30" 
+                        className="pl-14 h-14 bg-transparent border-none ring-0 focus-visible:ring-0 text-sm font-bold placeholder:text-muted-foreground/30" 
                         value={search} 
                         onChange={e => setSearch(e.target.value)} 
                     />
                 </div>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-full md:w-56 h-12 bg-slate-50 border-none rounded-xl font-black text-[10px] uppercase tracking-widest px-6 transition-colors hover:bg-slate-100">
+                    <SelectTrigger className="w-full md:w-64 h-14 bg-slate-50 border-none rounded-xl font-black text-[10px] uppercase tracking-widest px-8 transition-colors hover:bg-slate-100">
                         <div className="flex items-center gap-2">
-                            <Shield className="w-3.5 h-3.5 text-primary" />
+                            <Shield className="w-4 h-4 text-primary" />
                             <SelectValue placeholder="Registry State" />
                         </div>
                     </SelectTrigger>
@@ -183,41 +213,39 @@ export default function TeacherRepairRequests() {
                         {STATUSES.map(s => <SelectItem key={s} value={s} className="text-[10px] font-black uppercase tracking-widest">{s}</SelectItem>)}
                     </SelectContent>
                 </Select>
-            </div>
+            </motion.div>
 
             {loading ? (
                 <div className="flex justify-center py-40">
                     <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {filtered.length === 0 ? (
-                        <div className="col-span-full text-center py-40 bg-white rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center">
-                            <Star className="w-16 h-16 mb-4 text-primary opacity-20" />
-                            <h3 className="text-xl font-serif font-black text-foreground tracking-tight">System Integrity Normal</h3>
+                        <motion.div variants={itemVariants} className="col-span-full text-center py-40 bg-white rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center">
+                            <Star className="w-20 h-20 mb-6 text-primary opacity-20" />
+                            <h3 className="text-2xl font-serif font-black text-foreground tracking-tight italic">System Integrity Normal</h3>
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] mt-1 text-muted-foreground opacity-60">No active reports encountered in your sector</p>
-                        </div>
+                        </motion.div>
                     ) : (
                         filtered.map((req, idx) => (
                             <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.05 }}
+                                variants={itemVariants}
                                 key={req.id}
                                 onClick={() => setSelected(req)}
                                 className={cn(
-                                    "group relative flex flex-col bg-white rounded-[2rem] p-8 transition-all duration-500 border border-transparent hover:border-border hover:bg-slate-50/50 cursor-pointer shadow-sm hover:shadow-xl",
-                                    req.status === 'Pending Teacher Verification' && "ring-2 ring-primary ring-offset-4 ring-offset-background bg-primary/5 border-primary/20"
+                                    "group relative flex flex-col bg-white rounded-[2.5rem] p-10 transition-all duration-500 border border-transparent hover:border-border hover:bg-slate-50/50 cursor-pointer shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_20px_50px_rgb(0,0,0,0.08)]",
+                                    req.status === 'Pending Teacher Verification' && "ring-2 ring-primary ring-offset-8 ring-offset-background bg-primary/5 border-primary/20"
                                 )}
                             >
                                 <div className="flex items-start justify-between mb-8">
                                     <div className={cn(
-                                        "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-sm border border-transparent",
+                                        "w-16 h-16 rounded-[1.25rem] flex items-center justify-center transition-all duration-500 shadow-sm border border-transparent",
                                         req.status === 'Pending Teacher Verification' ? "bg-primary text-white" : "bg-slate-50 text-muted-foreground group-hover:bg-white group-hover:text-primary group-hover:border-border"
                                     )}>
-                                        <Wrench className="w-7 h-7" />
+                                        <Wrench className="w-8 h-8" />
                                     </div>
-                                    <div className="flex flex-col items-end gap-2">
+                                    <div className="flex flex-col items-end gap-2 text-[10px]">
                                         <StatusBadge status={req.priority || 'Medium'} size="xs" />
                                         <StatusBadge status={req.status} size="xs" />
                                     </div>
@@ -227,10 +255,10 @@ export default function TeacherRepairRequests() {
                                     <p className="text-xs text-muted-foreground font-medium line-clamp-2 opacity-60 italic leading-relaxed">"{req.description}"</p>
                                 </div>
                                 
-                                <div className="flex items-center justify-between mt-8 pt-6 border-t border-border/60">
-                                    <div className="flex items-center gap-2 text-muted-foreground/40">
+                                <div className="flex items-center justify-between mt-10 pt-8 border-t border-border/40">
+                                    <div className="flex items-center gap-2 text-muted-foreground/30">
                                         <Clock className="w-3.5 h-3.5" />
-                                        <span className="text-[9px] font-black uppercase tracking-[0.2em]">{req.created_at ? format(req.created_at.toDate(), 'MMM d, yyyy') : ''}</span>
+                                        <span className="text-[9px] font-black uppercase tracking-[0.2em]">{req.created_at?.toDate ? format(req.created_at.toDate(), 'MMM d, yyyy') : ''}</span>
                                     </div>
                                     {req.status === 'Pending Teacher Verification' ? (
                                         <div className="text-[9px] font-black text-primary uppercase tracking-[0.2em] animate-pulse">Action Required • Verify →</div>
@@ -364,6 +392,6 @@ export default function TeacherRepairRequests() {
                     )}
                 </DialogContent>
             </Dialog>
-        </div>
+        </motion.div>
     );
 }
