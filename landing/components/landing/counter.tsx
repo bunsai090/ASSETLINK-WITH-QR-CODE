@@ -8,11 +8,12 @@ type CounterProps = {
   to: number
   duration?: number
   /** Thousands separator etc. */
-  format?: (value: number) => string
+  formatAction?: (value: number) => string
   prefix?: string
   suffix?: string
   className?: string
   decimals?: number
+  once?: boolean
 }
 
 /**
@@ -23,18 +24,19 @@ export function Counter({
   from = 0,
   to,
   duration = 1.8,
-  format,
+  formatAction,
   prefix = "",
   suffix = "",
   className,
   decimals = 0,
+  once = true,
 }: CounterProps) {
   const ref = useRef<HTMLSpanElement>(null)
-  const inView = useInView(ref, { once: true, amount: 0.5 })
+  const inView = useInView(ref, { once, amount: 0.5 })
   const reduce = useReducedMotion()
 
   const formatter =
-    format ??
+    formatAction ??
     ((v: number) =>
       v.toLocaleString("en-US", {
         minimumFractionDigits: decimals,

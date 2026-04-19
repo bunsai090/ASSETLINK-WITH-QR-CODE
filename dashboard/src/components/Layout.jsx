@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import {
-    LayoutDashboard, Package, AlertTriangle, Wrench, BarChart3,
-    Menu, X, LogOut, ChevronRight, QrCode, CalendarDays
+    Menu, X, LogOut, ChevronRight, QrCode, CalendarDays,
+    School, ShieldAlert, Eye, LayoutDashboard, Package, AlertTriangle, Wrench, BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sileo } from 'sileo';
@@ -20,6 +20,8 @@ const navItems = [
     { path: '/tasks', label: 'My Tasks', icon: Wrench, roles: ['admin', 'maintenance'] },
     { path: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin', 'principal'] },
     { path: '/calendar', label: 'Calendar', icon: CalendarDays, roles: ['admin', 'maintenance', 'principal'] },
+    { path: '/schools', label: 'Schools', icon: School, roles: ['admin', 'supervisor'] },
+    { path: '/oversight', label: 'Oversight', icon: Eye, roles: ['supervisor'] },
 ];
 
 export default function Layout() {
@@ -63,8 +65,8 @@ export default function Layout() {
                 <div className="flex flex-col h-full relative overflow-hidden">
                     {/* Logo Section */}
                     <div className="flex items-center gap-3 px-8 h-24 flex-shrink-0 relative z-10">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20 transform -rotate-3 transition-transform hover:rotate-0">
-                            <QrCode className="w-6 h-6" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-[0.8rem] bg-[#054a29] shadow-lg shadow-[#054a29]/20 transform -rotate-3 transition-transform hover:rotate-0 overflow-hidden border border-white/10">
+                            <img src="/logo.png" alt="AssetLink Logo" className="w-full h-full object-cover scale-110 shadow-inner" />
                         </div>
                         <div className="flex flex-col items-start leading-none gap-1">
                             <span className="text-xl font-serif font-black tracking-tight text-white italic">Asset<span className="text-primary-foreground/80 not-italic font-sans font-bold tracking-tighter ml-0.5">Link</span></span>

@@ -4,7 +4,7 @@ import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, serverTi
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/lib/AuthContext';
 import StatusBadge from '../../components/StatusBadge';
-import { Wrench, CheckCircle, Clock, AlertCircle, Camera, Image as ImageIcon, UploadCloud, X } from 'lucide-react';
+import { Wrench, CheckCircle, Clock, AlertCircle, Camera, Image as ImageIcon, UploadCloud, X, ArrowRight, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { sileo } from 'sileo';
 import { format } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const TASK_STATUSES = ['Assigned', 'In Progress', 'On Hold', 'Completed', 'Pending Teacher Verification'];
 
@@ -47,12 +49,18 @@ export default function Tasks() {
         }
 
         const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-            const tasksList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const tasksList = snapshot.docs.map(doc => {
+                /** @type {any} */
+                const data = doc.data();
+                return { ...data, id: doc.id };
+            });
             
             // Client-side sorting by date (descending)
             const sorted = tasksList.sort((a, b) => {
-                const dateA = a.created_at?.toDate?.() ?? new Date(0);
-                const dateB = b.created_at?.toDate?.() ?? new Date(0);
+                /** @type {any} */ const taskA = a;
+                /** @type {any} */ const taskB = b;
+                const dateA = taskA.created_at?.toDate ? taskA.created_at.toDate() : new Date(0);
+                const dateB = taskB.created_at?.toDate ? taskB.created_at.toDate() : new Date(0);
                 return dateB - dateA;
             });
 
@@ -82,6 +90,7 @@ export default function Tasks() {
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = (event) => {
+                if (typeof event.target?.result !== 'string') return;
                 const img = new Image();
                 img.src = event.target.result;
                 img.onload = () => {
@@ -227,73 +236,129 @@ export default function Tasks() {
         Completed: tasks.filter(t => t.status === 'Pending Teacher Verification' || t.status === 'Completed').length,
     };
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: { type: 'spring', stiffness: 300, damping: 24 }
+        }
+    };
+
     return (
-        <div className="space-y-6 animate-fade-in">
-            <div className="px-1">
-                <h1 className="text-2xl font-bold text-foreground">Maintenance Tasks</h1>
-                <p className="text-muted-foreground text-sm mt-1 tracking-tight">Manage and update your assigned school repair works.</p>
-            </div>
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-12 pb-20 relative z-10"
+        >
+            <motion.div variants={itemVariants} className="px-1">
+                <h1 className="text-4xl md:text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1]">
+                    Service <span className="text-primary italic">Record</span>
+                </h1>
+                <p className="text-muted-foreground text-lg mt-2 font-medium tracking-tight opacity-70">
+                    Manage and synchronize your assigned school restoration protocols.
+                </p>
+            </motion.div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {[
-                    { label: 'Assigned', count: counts.Assigned, icon: Clock, color: 'text-blue-600 bg-blue-50 border-blue-100' },
-                    { label: 'Review', count: counts['In Progress'], icon: Wrench, color: 'text-amber-600 bg-amber-50 border-amber-100' },
-                    { label: 'Completed', count: counts.Completed, icon: CheckCircle, color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+                    { label: 'Assigned', count: counts.Assigned, icon: Clock, color: 'text-blue-600 bg-blue-50/50 border-blue-100' },
+                    { label: 'Active', count: counts['In Progress'], icon: Wrench, color: 'text-amber-600 bg-amber-50/50 border-amber-100' },
+                    { label: 'Completed', count: counts.Completed, icon: CheckCircle, color: 'text-emerald-600 bg-emerald-50/50 border-emerald-100' },
                 ].map(({ label, count, icon: Icon, color }) => (
-                    <div key={label} className={`rounded-2xl border p-4 text-center ${color}`}>
-                        <div className="w-9 h-9 rounded-xl bg-white/50 flex items-center justify-center mx-auto mb-2 shadow-sm">
-                            <Icon className="w-5 h-5" />
+                    <motion.div 
+                        whileHover={{ y: -5 }}
+                        key={label} 
+                        className={cn("rounded-[2.5rem] border p-8 text-center transition-all duration-500", color)}
+                    >
+                        <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center mx-auto mb-4 shadow-sm border border-black/5">
+                            <Icon className="w-7 h-7" />
                         </div>
-                        <p className="text-2xl font-black">{count}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">{label}</p>
-                    </div>
+                        <p className="text-4xl font-serif font-black tracking-tighter leading-none">{count}</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 mt-3">{label}</p>
+                    </motion.div>
                 ))}
-            </div>
+            </motion.div>
 
-            <div className="flex items-center gap-3">
+            <motion.div variants={itemVariants} className="flex items-center gap-4 bg-white p-2 rounded-[1.5rem] border border-border w-fit shadow-sm">
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-52 h-11 bg-card border-border"><SelectValue placeholder="Status Filter" /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Task Records</SelectItem>
-                        {TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    <SelectTrigger className="w-64 h-12 bg-transparent border-none font-black text-[10px] uppercase tracking-widest px-6 focus:ring-0">
+                        <div className="flex items-center gap-2">
+                            <Shield className="w-4 h-4 text-primary" />
+                            <SelectValue placeholder="Registry State" />
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-border">
+                        <SelectItem value="all" className="text-[10px] font-black uppercase tracking-widest">Universal Record</SelectItem>
+                        {TASK_STATUSES.map(s => <SelectItem key={s} value={s} className="text-[10px] font-black uppercase tracking-widest">{s}</SelectItem>)}
                     </SelectContent>
                 </Select>
-            </div>
+            </motion.div>
 
             {loading ? (
-                <div className="flex justify-center py-24"><div className="w-8 h-8 border-4 border-teal/20 border-t-teal rounded-full animate-spin" /></div>
+                <div className="flex justify-center py-40">
+                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                </div>
             ) : (
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-6">
                     {displayed.length === 0 ? (
-                        <div className="text-center py-24 text-muted-foreground bg-card rounded-2xl border border-dashed border-border/60">
-                            <Wrench className="w-12 h-12 mx-auto mb-4 opacity-10" />
-                            <p className="font-bold uppercase tracking-widest text-[10px]">No assigned workload found</p>
-                        </div>
+                        <motion.div variants={itemVariants} className="text-center py-40 bg-white rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center">
+                            <Wrench className="w-20 h-20 mx-auto mb-6 text-primary opacity-10" />
+                            <h3 className="text-2xl font-serif font-black text-foreground tracking-tight italic">Clear Workload</h3>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] mt-2 text-muted-foreground opacity-60">No maintenance protocols encountered in your schedule</p>
+                        </motion.div>
                     ) : (
-                        displayed.map(task => (
-                            <div
+                        displayed.map((task, idx) => (
+                            <motion.div
+                                variants={itemVariants}
                                 key={task.id}
                                 onClick={() => openTask(task)}
-                                className="bg-card rounded-2xl border border-border p-5 hover:shadow-lg hover:border-teal/30 transition-all cursor-pointer group animate-in slide-in-from-bottom-2 duration-300"
+                                className="bg-white rounded-[2.5rem] border border-border p-8 hover:shadow-[0_20px_50px_rgb(0,0,0,0.06)] hover:bg-slate-50/50 hover:border-primary/20 transition-all cursor-pointer group"
                             >
-                                <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-teal/10 group-hover:text-teal transition-colors flex-shrink-0">
-                                        <Wrench className="w-6 h-6" />
+                                <div className="flex flex-col md:flex-row md:items-center gap-8">
+                                    <div className="w-20 h-20 rounded-[1.5rem] bg-slate-50 flex items-center justify-center text-muted-foreground/30 group-hover:bg-primary group-hover:text-white transition-all duration-500 flex-shrink-0 shadow-inner group-hover:shadow-lg group-hover:shadow-primary/20">
+                                        <Wrench className="w-10 h-10" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                                            <h3 className="font-bold text-foreground text-base tracking-tight">{task.asset_name}</h3>
-                                            <StatusBadge status={task.priority || 'Medium'} />
-                                            <StatusBadge status={task.status} />
+                                        <div className="flex items-center gap-4 flex-wrap mb-3">
+                                            <h3 className="text-2xl font-serif font-black text-foreground tracking-tight group-hover:text-primary transition-colors leading-none">{task.asset_name}</h3>
+                                            <div className="flex items-center gap-2">
+                                                <StatusBadge status={task.priority || 'Medium'} size="xs" />
+                                                <StatusBadge status={task.status} size="xs" />
+                                            </div>
                                         </div>
-                                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                                            <span>{task.school_name || 'Assigned School'}</span>
-                                            {task.request_number && <span className="text-teal font-black italic">Ref: #{task.request_number}</span>}
+                                        <div className="flex flex-wrap items-center gap-4 text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">
+                                            <span className="flex items-center gap-2 italic">{task.school_name || 'Assigned School'}</span>
+                                            {task.request_number && (
+                                                <div className="flex items-center gap-2 px-3 py-1 bg-primary/5 text-primary rounded-full border border-primary/10">
+                                                    SYNC # {task.request_number}
+                                                </div>
+                                            )}
                                         </div>
-                                        {task.notes && <p className="text-xs text-muted-foreground mt-3 line-clamp-1 italic font-medium">"{task.notes}"</p>}
+                                        {task.notes && <p className="text-xs text-muted-foreground/60 mt-6 italic font-medium leading-relaxed border-l-2 border-slate-100 pl-4 group-hover:border-primary/20 transition-colors">"{task.notes}"</p>}
+                                    </div>
+                                    <div className="flex md:flex-col items-center md:items-end justify-between md:justify-center gap-4 shrink-0">
+                                        <div className="text-[10px] font-black text-muted-foreground/20 uppercase tracking-[0.3em] font-sans">
+                                            {task.created_at?.toDate ? format(task.created_at.toDate(), 'MMM d, yyyy') : 'Recent'}
+                                        </div>
+                                        <div className="w-12 h-12 rounded-full border border-border flex items-center justify-center group-hover:bg-primary group-hover:border-primary group-hover:text-white transition-all duration-500">
+                                            <ArrowRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))
                     )}
                 </div>
@@ -396,6 +461,6 @@ export default function Tasks() {
                     )}
                 </DialogContent>
             </Dialog>
-        </div>
+        </motion.div>
     );
 }

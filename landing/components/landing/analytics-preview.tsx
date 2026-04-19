@@ -1,6 +1,8 @@
 "use client"
 
+import { useRef } from "react"
 import { TrendingDown, TrendingUp } from "lucide-react"
+import { useInView } from "framer-motion"
 import {
   Bar,
   BarChart,
@@ -20,6 +22,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { Reveal, StaggerGroup, StaggerItem } from "./motion"
+import { Counter } from "./counter"
 
 const resolutionData = [
   { month: "Oct", days: 5.8 },
@@ -64,11 +67,13 @@ const statusConfig: ChartConfig = {
 
 export function AnalyticsPreview() {
   const statusTotal = statusData.reduce((acc, d) => acc + d.value, 0)
+  const containerRef = useRef(null)
+  const isVisible = useInView(containerRef, { amount: 0.3, once: false })
 
   return (
-    <section id="analytics" className="border-b border-border/60">
+    <section id="analytics" ref={containerRef} className="border-b border-border/60 overflow-hidden">
       <div className="w-full px-6 py-20 md:px-12 md:py-24 lg:px-16">
-        <Reveal>
+        <Reveal once={false}>
           <div className="max-w-2xl">
             <p className="text-xs font-medium tracking-wide text-primary uppercase">Analytics & reporting</p>
             <h2 className="mt-3 font-serif text-3xl tracking-tight text-balance md:text-4xl">
@@ -84,28 +89,33 @@ export function AnalyticsPreview() {
 
         <StaggerGroup
           className="mt-12 grid gap-4 lg:grid-cols-3"
-          staggerChildren={0.12}
+          staggerChildren={0.15}
           delayChildren={0.1}
+          once={false}
         >
           {/* Resolution time */}
           <StaggerItem as="article" className="rounded-2xl border border-border bg-card p-5 transition-shadow duration-300 hover:shadow-md">
             <header className="flex items-start justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Avg. resolution time</p>
-                <p className="mt-1 flex items-baseline gap-2 font-serif text-3xl">
-                  1.8d
+                <div className="mt-1 flex items-baseline gap-2 font-serif text-3xl">
+                  <Counter to={1.8} decimals={1} suffix="d" duration={1.5} once={false} />
                   <span className="inline-flex items-center gap-0.5 text-xs font-sans font-medium text-primary">
                     <TrendingDown className="h-3 w-3" aria-hidden="true" />
                     −69%
                   </span>
-                </p>
+                </div>
               </div>
               <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                 Last 6 months
               </span>
             </header>
             <ChartContainer config={resolutionConfig} className="mt-4 h-44 w-full">
-              <LineChart data={resolutionData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <LineChart 
+                key={isVisible ? "visible" : "hidden"}
+                data={isVisible ? resolutionData : []} 
+                margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+              >
                 <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
                 <XAxis
                   dataKey="month"
@@ -126,6 +136,8 @@ export function AnalyticsPreview() {
                   strokeWidth={2}
                   dot={{ r: 3, fill: "var(--color-days)" }}
                   activeDot={{ r: 5 }}
+                  animationDuration={1500}
+                  animationBegin={200}
                 />
               </LineChart>
             </ChartContainer>
@@ -136,20 +148,24 @@ export function AnalyticsPreview() {
             <header className="flex items-start justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Damage patterns — school-wide</p>
-                <p className="mt-1 flex items-baseline gap-2 font-serif text-3xl">
-                  135
+                <div className="mt-1 flex items-baseline gap-2 font-serif text-3xl">
+                  <Counter to={135} duration={1.2} once={false} />
                   <span className="inline-flex items-center gap-0.5 text-xs font-sans font-medium text-accent-foreground">
                     <TrendingUp className="h-3 w-3" aria-hidden="true" />
                     this quarter
                   </span>
-                </p>
+                </div>
               </div>
               <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                 By category
               </span>
             </header>
             <ChartContainer config={damageConfig} className="mt-4 h-44 w-full">
-              <BarChart data={damageData} margin={{ top: 8, right: 4, left: -16, bottom: 0 }}>
+              <BarChart 
+                key={isVisible ? "visible" : "hidden"}
+                data={isVisible ? damageData : []} 
+                margin={{ top: 8, right: 4, left: -16, bottom: 0 }}
+              >
                 <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
                 <XAxis
                   dataKey="type"
@@ -164,7 +180,13 @@ export function AnalyticsPreview() {
                   tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
                 />
                 <ChartTooltip cursor={{ fill: "var(--secondary)" }} content={<ChartTooltipContent />} />
-                <Bar dataKey="tickets" fill="var(--color-tickets)" radius={[6, 6, 0, 0]} />
+                <Bar 
+                  dataKey="tickets" 
+                  fill="var(--color-tickets)" 
+                  radius={[6, 6, 0, 0]} 
+                  animationDuration={1200}
+                  animationBegin={400}
+                />
               </BarChart>
             </ChartContainer>
           </StaggerItem>
@@ -174,7 +196,9 @@ export function AnalyticsPreview() {
             <header className="flex items-start justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Ticket status mix</p>
-                <p className="mt-1 font-serif text-3xl">{statusTotal}</p>
+                <p className="mt-1 font-serif text-3xl">
+                  <Counter to={statusTotal} duration={1.2} once={false} />
+                </p>
                 <p className="text-xs text-muted-foreground">tickets tracked</p>
               </div>
               <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
@@ -183,16 +207,18 @@ export function AnalyticsPreview() {
             </header>
             <div className="mt-2 flex items-center gap-4">
               <ChartContainer config={statusConfig} className="h-40 w-40 shrink-0">
-                <PieChart>
+                <PieChart key={isVisible ? "visible" : "hidden"}>
                   <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
                   <Pie
-                    data={statusData}
+                    data={isVisible ? statusData : []}
                     dataKey="value"
                     nameKey="name"
                     innerRadius={40}
                     outerRadius={60}
                     paddingAngle={2}
                     strokeWidth={0}
+                    animationDuration={1000}
+                    animationBegin={600}
                   >
                     {statusData.map((entry) => (
                       <Cell key={entry.name} fill={entry.fill} />
@@ -211,7 +237,7 @@ export function AnalyticsPreview() {
                       />
                       {s.name}
                     </span>
-                    <span className="font-mono text-foreground">{s.value}</span>
+                    <span className="font-mono text-foreground">{isVisible ? <Counter to={s.value} duration={1} once={false} /> : 0}</span>
                   </li>
                 ))}
               </ul>

@@ -25,11 +25,17 @@ export default function MaintenanceDashboard() {
         );
 
         const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-            const tasksList = (/** @type {any[]} */ (snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))));
+            const tasksList = snapshot.docs.map(doc => {
+                /** @type {any} */
+                const data = doc.data();
+                return { ...data, id: doc.id };
+            });
             // Client-side sorting by date (descending)
             const sorted = tasksList.sort((a, b) => {
-                const dateA = (a.created_at)?.toDate?.() ?? new Date(0);
-                const dateB = (b.created_at)?.toDate?.() ?? new Date(0);
+                /** @type {any} */ const taskA = a;
+                /** @type {any} */ const taskB = b;
+                const dateA = taskA.created_at?.toDate ? taskA.created_at.toDate() : new Date(0);
+                const dateB = taskB.created_at?.toDate ? taskB.created_at.toDate() : new Date(0);
                 return dateB - dateA;
             });
             setTasks(sorted);
@@ -61,11 +67,36 @@ export default function MaintenanceDashboard() {
         );
     }
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: { type: 'spring', stiffness: 300, damping: 24 }
+        }
+    };
+
     return (
-        <div className="space-y-10 animate-fade-in relative z-10">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-12 pb-20 relative z-10"
+        >
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="space-y-1.5 font-sans">
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+                <div className="space-y-1.5">
                     <h1 className="text-4xl md:text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1]">
                         Personnel <span className="text-primary italic">Workboard</span>
                     </h1>
@@ -77,7 +108,7 @@ export default function MaintenanceDashboard() {
                         <motion.div 
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            className="mt-4 flex items-center gap-3 px-4 py-2 bg-rose-50 border border-rose-100 rounded-full w-fit group"
+                            className="mt-6 flex items-center gap-3 px-5 py-2.5 bg-rose-50 border border-rose-100 rounded-full w-fit group"
                         >
                             <AlertTriangle className="w-4 h-4 text-rose-600 animate-pulse" />
                             <span className="text-[10px] font-black text-rose-700 uppercase tracking-[0.2em] group-hover:tracking-tight transition-all duration-500">
@@ -87,66 +118,67 @@ export default function MaintenanceDashboard() {
                     )}
                 </div>
                 <Link to="/tasks" className="shrink-0">
-                    <Button size="lg" className="bg-primary hover:bg-primary/95 text-primary-foreground gap-3 shadow-lg shadow-primary/10 rounded-xl px-10 h-14 text-base font-bold transition-all hover:scale-[1.02] active:scale-[0.98]">
+                    <Button size="lg" className="h-16 px-10 rounded-[1.25rem] bg-primary hover:bg-primary/95 text-white gap-3 shadow-xl shadow-primary/20 text-base font-bold transition-all hover:scale-[1.02] active:scale-[0.98]">
                         <Wrench className="w-5 h-5" /> Manage Tasks
                     </Button>
                 </Link>
-            </div>
+            </motion.div>
 
             {/* Tactical Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatsCard title="Assigned" value={myAssigned.length} subtitle="New deployment" icon={Clock} color="blue" />
                 <StatsCard title="Active" value={myInProgress.length} subtitle="Operations" icon={Wrench} color="amber" />
                 <StatsCard title="Stalled" value={myOnHold.length} subtitle="Blocked items" icon={AlertTriangle} color="red" />
                 <StatsCard title="Completed" value={myCompleted.length} subtitle="Success history" icon={CheckCircle} color="teal" />
-            </div>
+            </motion.div>
 
             <div className="grid lg:grid-cols-3 gap-8">
                 {/* Workload List Card */}
-                <div className="lg:col-span-2 bg-white rounded-2xl border border-border p-8 shadow-sm relative overflow-hidden">
-                    <div className="flex items-center justify-between mb-8 px-2 relative z-10">
+                <motion.div 
+                    variants={itemVariants}
+                    className="lg:col-span-2 bg-white rounded-[2.5rem] border border-border p-10 shadow-sm relative overflow-hidden"
+                >
+                    <div className="flex items-center justify-between mb-8 relative z-10">
                         <div>
-                            <h2 className="text-2xl font-serif font-bold text-foreground">Operational Queue</h2>
-                            <p className="text-xs text-muted-foreground mt-1 font-medium italic opacity-60">High-priority maintenance requirements</p>
+                            <h2 className="text-2xl font-serif font-black text-foreground">Operational <span className="text-primary italic">Queue</span></h2>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">High-priority maintenance requirements</p>
                         </div>
                         <Link to="/tasks">
-                            <Button variant="outline" size="sm" className="rounded-full border-primary/20 text-primary hover:bg-primary/5 gap-2 px-5 font-bold h-9">
-                                View Full Queue <ArrowRight className="w-4 h-4" />
+                            <Button variant="outline" className="h-10 px-6 rounded-full border-border text-[9px] font-black uppercase tracking-widest hover:bg-slate-50">
+                                View Full Queue <ArrowRight className="w-4 h-4 ml-2" />
                             </Button>
                         </Link>
                     </div>
 
                     <div className="space-y-1 relative z-10">
                         {[...myAssigned, ...myInProgress].length === 0 ? (
-                            <div className="text-center py-20 rounded-xl bg-slate-50 border border-dashed border-border flex flex-col items-center justify-center opacity-60">
-                                <CheckCircle className="w-12 h-12 text-emerald-500 mb-4 opacity-40" />
-                                <h3 className="text-lg font-bold text-foreground">No Active Tasks</h3>
-                                <p className="text-xs text-muted-foreground max-w-[200px] mt-2 font-medium">Your queue is fully clear. Ready for deployment.</p>
+                            <div className="text-center py-24 rounded-[2rem] bg-slate-50/50 border border-dashed border-border/50 flex flex-col items-center justify-center">
+                                <CheckCircle className="w-16 h-16 text-emerald-500/20 mb-4" />
+                                <h3 className="text-xl font-serif font-black text-foreground italic opacity-40">No Active Tasks</h3>
+                                <p className="text-xs text-muted-foreground max-w-[200px] mt-2 font-medium opacity-40">Your queue is fully clear. Ready for deployment.</p>
                             </div>
                         ) : (
                             [...myAssigned, ...myInProgress].slice(0, 5).map((task, idx) => (
                                 <motion.div
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.05 }}
+                                    variants={itemVariants}
                                     key={task.id}
                                 >
                                     <Link to="/tasks">
-                                        <div className="group flex items-center gap-5 p-4 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-border">
-                                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 group-hover:bg-white shadow-sm transition-colors">
+                                        <div className="group flex items-center gap-6 p-5 rounded-2xl hover:bg-slate-50 transition-all border border-transparent hover:border-border/40">
+                                            <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0 group-hover:bg-white group-hover:shadow-md transition-all">
                                                 <motion.div animate={{ rotate: task.status === 'In Progress' ? 360 : 0 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }}>
-                                                    <Wrench className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                                    <Wrench className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
                                                 </motion.div>
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-black text-foreground tracking-tight truncate group-hover:text-primary transition-colors uppercase">
+                                                <p className="font-black text-foreground text-sm tracking-tight truncate group-hover:text-primary transition-colors uppercase">
                                                     {task.asset_name}
                                                 </p>
-                                                <p className="text-[10px] font-bold text-muted-foreground mt-0.5 opacity-60">{task.school_name || "Campus-Wide"} · Priority: {task.priority || 'Normal'}</p>
+                                                <p className="text-[10px] font-bold text-muted-foreground/40 mt-1 italic">{task.school_name || "Campus-Wide"} · Priority: {task.priority || 'Normal'}</p>
                                             </div>
-                                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                            <div className="flex flex-col items-end gap-2 flex-shrink-0">
                                                 <StatusBadge status={task.status} size="sm" />
-                                                <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest leading-none mt-1">
+                                                <span className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-[0.2em] leading-none">
                                                     {task.created_at ? format(task.created_at.toDate(), 'MMM dd') : 'Recent'}
                                                 </span>
                                             </div>
@@ -156,67 +188,71 @@ export default function MaintenanceDashboard() {
                             ))
                         )}
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Efficiency Analytics */}
                 <div className="space-y-8">
-                    <div className="bg-sidebar rounded-2xl p-8 text-white shadow-xl shadow-primary/10 relative overflow-hidden group border border-sidebar-border">
+                    <motion.div 
+                        variants={itemVariants}
+                        className="bg-[#054a29] rounded-[2.5rem] p-10 text-white shadow-2xl shadow-primary/20 relative overflow-hidden group"
+                    >
                         <div className="relative z-10">
                             <div className="flex items-center gap-3 mb-8">
                                 <TrendingUp className="w-4 h-4 text-primary" />
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 leading-none">Performance Matrix</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 leading-none italic">Performance Matrix</span>
                             </div>
                             
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-6xl font-serif font-black tracking-tighter italic">
+                            <div className="flex items-baseline gap-3 mt-2">
+                                <span className="text-7xl font-serif font-black tracking-tighter italic leading-none">
                                     {myTasks.length > 0 ? Math.round((myCompleted.length / myTasks.length) * 100) : 0}%
                                 </span>
-                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">Velocity</span>
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest italic">Velocity</span>
                             </div>
                             
-                            <div className="mt-8 space-y-4">
-                                <div className="h-2 bg-white/5 rounded-full overflow-hidden p-0.5">
+                            <div className="mt-10 space-y-4">
+                                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                                     <motion.div 
                                         initial={{ width: 0 }}
-                                        animate={{ width: myTasks.length > 0 ? `${(myCompleted.length / myTasks.length) * 100}%` : '0%' }}
-                                        transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
-                                        className="h-full bg-primary rounded-full" 
+                                        whileInView={{ width: myTasks.length > 0 ? `${(myCompleted.length / myTasks.length) * 100}%` : '0%' }}
+                                        viewport={{ once: false }}
+                                        transition={{ duration: 1.5, ease: "circOut" }}
+                                        className="h-full bg-primary rounded-full transition-all duration-1000" 
                                     />
                                 </div>
-                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-white/20">
+                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-white/20">
                                     <span>Resolution Rate</span>
-                                    <span className="text-white/40">{myCompleted.length} / {myTasks.length} Done</span>
+                                    <span className="text-white/40 italic">{myCompleted.length} / {myTasks.length} Done</span>
                                 </div>
                             </div>
 
-                            <div className="mt-10 p-5 rounded-xl bg-white/5 border border-white/5">
-                                <p className="text-[11px] font-medium text-white/60 leading-relaxed italic">
-                                    "Your resolution velocity is currently <span className="text-primary not-italic font-bold">Optimal</span>. Campus standards are being exceeded."
+                            <div className="mt-10 p-6 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm">
+                                <p className="text-[11px] font-medium text-white/50 leading-relaxed italic">
+                                    Resolution velocity is <span className="text-primary not-italic font-black uppercase tracking-widest">Optimal</span>. Campus standards are being exceeded.
                                 </p>
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
 
                     {/* Quick Link Card */}
-                    <div className="bg-white rounded-2xl border border-border p-8 shadow-sm">
-                        <h3 className="text-lg font-serif font-bold text-foreground mb-6">Staff Quick-Actions</h3>
+                    <motion.div variants={itemVariants} className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm">
+                        <h3 className="text-xl font-serif font-black text-foreground mb-8">Quick <span className="text-primary italic">Actions</span></h3>
                         <div className="grid grid-cols-2 gap-4">
                             <Link to="/calendar" className="group">
-                                <div className="p-4 rounded-xl bg-slate-50 hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all text-center">
-                                    <Clock className="w-5 h-5 mx-auto mb-2 text-muted-foreground/60 group-hover:text-primary transition-all" />
+                                <div className="p-6 rounded-[1.5rem] bg-slate-50 hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all text-center">
+                                    <Clock className="w-5 h-5 mx-auto mb-3 text-muted-foreground/40 group-hover:text-primary transition-all" />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-all">Timeline</span>
                                 </div>
                             </Link>
                             <Link to="/tasks" className="group">
-                                <div className="p-4 rounded-xl bg-slate-50 hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all text-center">
-                                    <Wrench className="w-5 h-5 mx-auto mb-2 text-muted-foreground/60 group-hover:text-primary transition-all" />
+                                <div className="p-6 rounded-[1.5rem] bg-slate-50 hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all text-center">
+                                    <Wrench className="w-5 h-5 mx-auto mb-3 text-muted-foreground/40 group-hover:text-primary transition-all" />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-all">Tasks</span>
                                 </div>
                             </Link>
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }

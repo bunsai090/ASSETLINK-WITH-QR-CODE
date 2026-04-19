@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { School, Plus, Edit2, Trash2, MapPin, Phone, Mail, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,12 +21,14 @@ export default function Schools() {
     const [form, setForm] = useState({ name: '', address: '', region: '', division: '', principal_name: '', contact_email: '', contact_phone: '' });
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => { loadSchools(); }, []);
-    async function loadSchools() {
-        const data = await base44.entities.School.list('-created_date', 100);
-        setSchools(data);
-        setLoading(false);
-    }
+    useEffect(() => {
+        const q = query(collection(db, 'schools'), orderBy('name', 'asc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setSchools(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
 
     function openCreate() {
         setEditing(null);
@@ -42,23 +45,37 @@ export default function Schools() {
     async function handleSave() {
         if (!form.name) { toast.error('School name is required'); return; }
         setSaving(true);
-        if (editing) {
-            await base44.entities.School.update(editing.id, form);
-            toast.success('School updated');
-        } else {
-            await base44.entities.School.create(form);
-            toast.success('School added');
+        try {
+            if (editing) {
+                await updateDoc(doc(db, 'schools', editing.id), { 
+                    ...form,
+                    updated_at: serverTimestamp()
+                });
+                toast.success('School updated');
+            } else {
+                await addDoc(collection(db, 'schools'), {
+                    ...form,
+                    created_at: serverTimestamp(),
+                    updated_at: serverTimestamp()
+                });
+                toast.success('School added');
+            }
+            setShowModal(false);
+        } catch (error) {
+            toast.error('Failed to save school');
+        } finally {
+            setSaving(false);
         }
-        setSaving(false);
-        setShowModal(false);
-        loadSchools();
     }
 
     async function handleDelete(id) {
         if (!confirm('Delete this school?')) return;
-        await base44.entities.School.delete(id);
-        toast.success('School deleted');
-        loadSchools();
+        try {
+            await deleteDoc(doc(db, 'schools', id));
+            toast.success('School deleted');
+        } catch (error) {
+            toast.error('Failed to delete school');
+        }
     }
 
     return (

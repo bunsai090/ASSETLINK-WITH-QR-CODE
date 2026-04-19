@@ -118,34 +118,34 @@ export default function RepairRequests() {
                 </div>
             </div>
 
-            {/* Filters Bar */}
-            <div className="flex flex-col md:flex-row gap-4 bg-white p-2 rounded-2xl border border-border shadow-sm">
-                <div className="relative flex-1 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
+            {/* Filters Bar Area */}
+            <div className="flex flex-col md:flex-row gap-6 bg-white p-4 rounded-[2rem] border border-border shadow-sm group hover:shadow-xl transition-all duration-500">
+                <div className="relative flex-1 group/search">
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-all group-focus-within/search:text-primary group-focus-within/search:scale-110" />
                     <Input 
-                        placeholder="Search pipelines by asset or description..." 
-                        className="pl-12 h-12 bg-transparent border-none ring-0 focus-visible:ring-0 text-sm font-medium placeholder:text-muted-foreground/50" 
+                        placeholder="Search tactical pipelines by asset or telemetry..." 
+                        className="pl-16 h-14 bg-slate-50/50 border-none ring-0 focus-visible:ring-0 text-sm font-bold placeholder:text-muted-foreground/30 rounded-2xl group-hover/search:bg-slate-50 transition-all font-sans" 
                         value={search} 
                         onChange={e => setSearch(e.target.value)} 
                     />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
-                        <SelectTrigger className="w-full md:w-44 h-12 bg-slate-50 border-none rounded-xl font-bold text-[10px] uppercase tracking-widest px-6 transition-colors hover:bg-slate-100">
+                        <SelectTrigger className="w-full md:w-52 h-14 bg-white border-border rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] px-8 transition-all hover:bg-slate-50 hover:shadow-md">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
-                        <SelectContent className="rounded-xl border-border">
-                            <SelectItem value="all">Every State</SelectItem>
-                            {STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        <SelectContent className="rounded-2xl border-border shadow-2xl">
+                            <SelectItem value="all">Total Registry</SelectItem>
+                            {STATUSES.map(s => <SelectItem key={s} value={s} className="font-bold text-[11px] uppercase tracking-wider">{s}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <Select value={filterPriority} onValueChange={setFilterPriority}>
-                        <SelectTrigger className="w-full md:w-40 h-12 bg-slate-50 border-none rounded-xl font-bold text-[10px] uppercase tracking-widest px-6 transition-colors hover:bg-slate-100">
+                        <SelectTrigger className="w-full md:w-48 h-14 bg-white border-border rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] px-8 transition-all hover:bg-slate-50 hover:shadow-md">
                             <SelectValue placeholder="Priority" />
                         </SelectTrigger>
-                        <SelectContent className="rounded-xl border-border">
-                            <SelectItem value="all">All Priorities</SelectItem>
-                            {['Critical', 'High', 'Medium', 'Low'].map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                        <SelectContent className="rounded-2xl border-border shadow-2xl">
+                            <SelectItem value="all">Every Priority</SelectItem>
+                            {['Critical', 'High', 'Medium', 'Low'].map(p => <SelectItem key={p} value={p} className="font-bold text-[11px] uppercase tracking-wider">{p}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -156,136 +156,157 @@ export default function RepairRequests() {
                     <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 gap-1">
+                <div className="grid grid-cols-1 gap-6">
                     {filtered.length === 0 ? (
-                        <div className="text-center py-40 bg-slate-50 rounded-2xl border border-dashed border-border flex flex-col items-center justify-center">
-                            <AlertTriangle className="w-16 h-16 mb-4 text-muted-foreground opacity-20" />
-                            <h3 className="text-xl font-serif font-bold text-foreground">Pipeline Silent</h3>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] mt-1 text-muted-foreground opacity-60">No active logistics encountered</p>
+                        <div className="text-center py-40 bg-slate-50/50 rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center">
+                            <AlertTriangle className="w-20 h-20 mb-6 text-muted-foreground opacity-20" />
+                            <h3 className="text-2xl font-serif font-black text-foreground">Pipeline <span className="text-primary italic">Static</span></h3>
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em] mt-2 text-muted-foreground opacity-40 italic">Zero active logistics encountered</p>
                         </div>
                     ) : [...filtered].sort((a, b) => (priorityOrder[a.priority] ?? 4) - (priorityOrder[b.priority] ?? 4)).map((req, idx) => (
                         <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.02 }}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.1 + (idx * 0.05) }}
                             key={req.id}
                             onClick={() => { setSelected(req); setNotes(''); setAssignedTo(req.assigned_to_name || ''); }}
-                            className="bg-white rounded-xl border border-transparent hover:border-border p-5 flex items-center gap-6 cursor-pointer group transition-all duration-300 hover:bg-slate-50"
+                            className="bg-white rounded-[2.5rem] border border-border p-8 flex items-center gap-10 cursor-pointer group transition-all duration-500 hover:bg-white hover:shadow-2xl hover:shadow-primary/5 active:scale-[0.99] border-transparent hover:border-primary/20 relative"
                         >
-                            <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 group-hover:bg-white shadow-sm transition-colors">
-                                <Wrench className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <div className="w-20 h-20 rounded-[1.8rem] bg-slate-50 border border-border flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-sm group-hover:rotate-12">
+                                <Wrench className="w-8 h-8 group-hover:rotate-[-45deg] transition-transform duration-700" />
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex flex-wrap items-center gap-3 mb-1">
-                                    <h3 className="font-serif font-black text-lg text-foreground tracking-tight group-hover:text-primary transition-colors">{req.asset_name}</h3>
-                                    <StatusBadge status={req.priority} size="sm" />
-                                    <StatusBadge status={req.status} size="sm" />
+                            <div className="flex-1 min-w-0 font-sans">
+                                <div className="flex flex-wrap items-center gap-4 mb-3">
+                                    <h3 className="font-serif font-black text-2xl text-foreground tracking-tight group-hover:text-primary transition-all duration-300">{req.asset_name}</h3>
+                                    <div className="flex gap-2.5">
+                                        <StatusBadge status={req.priority} size="sm" />
+                                        <StatusBadge status={req.status} size="sm" />
+                                    </div>
                                 </div>
-                                <p className="text-xs text-muted-foreground font-medium line-clamp-1 opacity-60 italic leading-relaxed mb-3">"{req.description}"</p>
-                                <div className="flex flex-wrap items-center gap-6">
-                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
-                                        <Shield className="w-3 h-3" /> {req.school_name || 'Campus'}
+                                <p className="text-sm text-muted-foreground/60 font-medium line-clamp-1 italic leading-relaxed mb-6 group-hover:text-foreground transition-colors">"{req.description}"</p>
+                                <div className="flex flex-wrap items-center gap-8 border-t border-slate-50 pt-6">
+                                    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">
+                                        <Shield className="w-4 h-4" /> {req.school_name || 'Operational Zone'}
                                     </div>
-                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
-                                        <User className="w-3 h-3" /> {req.reported_by_name?.split(' ')[0] || 'System'}
+                                    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">
+                                        <User className="w-4 h-4" /> {req.reported_by_name?.split(' ')[0] || 'Registry'}
                                     </div>
-                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
-                                        <Clock className="w-3 h-3" /> {req.created_at ? format(req.created_at.toDate(), 'MMM d') : ''}
+                                    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">
+                                        <Clock className="w-4 h-4" /> {req.created_at ? format(req.created_at.toDate(), 'MMM d, yyyy') : 'Recent'}
                                     </div>
                                     {req.assigned_to_name && (
-                                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary italic">
-                                            <Wrench className="w-3 h-3" /> Assigned: {req.assigned_to_name}
+                                        <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-primary italic">
+                                            <Wrench className="w-3.5 h-3.5" /> Assigned: {req.assigned_to_name}
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            {req.photo_url && (
-                                <div className="w-16 h-16 rounded-xl overflow-hidden border border-border shrink-0 grayscale group-hover:grayscale-0 transition-all duration-500 shadow-sm">
+                            {req.photo_url ? (
+                                <div className="w-32 h-32 rounded-[2rem] overflow-hidden border border-border shrink-0 grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 shadow-xl group-hover:rotate-1">
                                     <img src={req.photo_url} alt="damage" className="w-full h-full object-cover" />
                                 </div>
+                            ) : (
+                                <div className="w-32 h-32 rounded-[2rem] bg-slate-50/50 border border-dashed border-border flex items-center justify-center shrink-0 opacity-20 group-hover:opacity-40 transition-opacity">
+                                    <MessageSquare className="w-10 h-10" />
+                                </div>
                             )}
-                            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <ChevronDown className="w-5 h-5 text-muted-foreground -rotate-90" />
+                            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-500">
+                                <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary border border-primary/10">
+                                    <ChevronDown className="w-6 h-6 -rotate-90" />
+                                </div>
                             </div>
                         </motion.div>
                     ))}
                 </div>
             )}
 
-            {/* Detail Modal */}
+            {/* Detailed Tactical Briefing Modal */}
             <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-                <DialogContent className="sm:max-w-2xl rounded-2xl border border-border p-0 overflow-hidden bg-white shadow-2xl">
+                <DialogContent className="sm:max-w-3xl rounded-[2.5rem] border border-border p-0 overflow-hidden bg-white shadow-3xl font-sans">
                     {selected && (
                         <div className="flex flex-col">
-                            {/* Modal Header/Hero */}
-                            <div className="p-8 pb-6 border-b border-border bg-slate-50/50">
-                                <div className="flex items-center justify-between mb-6">
-                                    <div className="flex gap-2">
+                            {/* Modal Header/Hero Area */}
+                            <div className="p-12 pb-10 border-b border-border bg-slate-50/50 relative overflow-hidden group/modal">
+                                <div className="flex items-center justify-between mb-10 relative z-10">
+                                    <div className="flex gap-3">
                                         <StatusBadge status={selected.status} size="sm" />
                                         <StatusBadge status={selected.priority} size="sm" />
                                     </div>
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 italic">Logistics ID: {selected.request_number || 'SYNC-PENDING'}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 italic">Tactical Briefing: {selected.request_number || 'REGISTRY-PENDING'}</span>
                                 </div>
-                                <h2 className="text-3xl font-serif font-black text-foreground tracking-tight leading-none mb-2">{selected.asset_name}</h2>
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{selected.asset_code || 'UNCODED RESOURCE'}</p>
+                                <h2 className="text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1] mb-3 relative z-10">{selected.asset_name}</h2>
+                                <p className="text-[11px] font-black uppercase tracking-[0.4em] text-primary relative z-10 italic">{selected.asset_code || 'UNSCANNED RESOURCE'}</p>
+                                <Wrench className="absolute -right-10 -bottom-10 w-64 h-64 text-primary/5 -rotate-12 group-hover/modal:rotate-0 transition-transform duration-1000" />
                             </div>
 
-                            <div className="p-8 space-y-8 custom-scrollbar max-h-[70vh] overflow-y-auto">
-                                <div className="grid grid-cols-2 gap-8">
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Origin Campus</p>
-                                        <p className="font-serif font-bold text-lg text-foreground">{selected.school_name || 'District Center'}</p>
+                            <div className="p-12 space-y-12 custom-scrollbar max-h-[65vh] overflow-y-auto">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                    <div className="space-y-1.5 pt-4 border-t border-slate-100">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 italic">Origin Coordinate</p>
+                                        <p className="font-serif font-black text-2xl text-foreground">{selected.school_name || 'Central District'}</p>
                                     </div>
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Reported By</p>
-                                        <p className="font-serif font-bold text-lg text-foreground">{selected.reported_by_name || 'System Auto'}</p>
+                                    <div className="space-y-1.5 pt-4 border-t border-slate-100">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 italic">Operational Lead</p>
+                                        <p className="font-serif font-black text-2xl text-foreground">{selected.reported_by_name || 'System Registry'}</p>
                                     </div>
                                 </div>
 
-                                <div className="space-y-3">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 ml-1">Incident Narrative</p>
-                                    <div className="bg-slate-50 p-6 rounded-xl border border-border italic text-sm font-medium leading-relaxed text-foreground/80">
-                                        "{selected.description}"
+                                <div className="space-y-4">
+                                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2 italic">Status Report / Incident Narrative</p>
+                                    <div className="bg-slate-50/50 p-10 rounded-[1.8rem] border border-border italic text-base font-medium leading-relaxed text-foreground/70 shadow-inner group/quote transition-all duration-500 hover:bg-white">
+                                        <span className="text-4xl text-primary font-serif font-black opacity-20 absolute -translate-x-6 -translate-y-4">"</span>
+                                        {selected.description}
+                                        <span className="text-4xl text-primary font-serif font-black opacity-20 absolute translate-x-2 translate-y-2">"</span>
                                     </div>
                                 </div>
 
                                 {selected.photo_url && (
-                                    <div className="space-y-3">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 ml-1">Visual Proof</p>
-                                        <div className="rounded-xl overflow-hidden border border-border shadow-sm">
-                                            <img src={selected.photo_url} alt="damage" className="w-full h-auto object-cover max-h-80" />
+                                    <div className="space-y-5 pt-4">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2 italic">Visual Telemetry</p>
+                                            <span className="text-[9px] font-black text-primary px-3 py-1 bg-primary/5 rounded-lg border border-primary/10 uppercase tracking-widest">Captured High-Resolution</span>
+                                        </div>
+                                        <div className="rounded-[2rem] overflow-hidden border border-border shadow-2xl group/img relative">
+                                            <img src={selected.photo_url} alt="damage" className="w-full h-auto object-cover max-h-[450px] group-hover:scale-105 transition-transform duration-1000" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Admin/Principal Actions */}
+                                {/* Admin/Principal Strategic Controls */}
                                 {(role === 'principal' || role === 'admin') && (selected.status === 'Pending' || selected.status === 'Approved') && (
-                                    <div className="space-y-6 pt-8 border-t border-border">
-                                        <div className="space-y-4">
-                                            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">Assign Logistics Command</p>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Maintenance Staff</Label>
-                                                    <Input value={assignedTo} onChange={e => setAssignedTo(e.target.value)} placeholder="Email address" className="h-12 rounded-xl bg-slate-50 border-border font-bold placeholder:font-medium text-sm" />
+                                    <div className="space-y-10 pt-12 border-t border-border">
+                                        <div className="space-y-8">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20">
+                                                    <Wrench className="w-5 h-5" />
                                                 </div>
-                                                <div className="space-y-2">
-                                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Scheduled Date</Label>
-                                                    <Input type="date" value={scheduledStartDate} onChange={e => setScheduledStartDate(e.target.value)} className="h-12 rounded-xl bg-slate-50 border-border font-bold text-sm" />
+                                                <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-primary italic">Logistics Command Authorization</h3>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                <div className="space-y-3">
+                                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-2 italic">Maintenance Personnel Entry</Label>
+                                                    <Input value={assignedTo} onChange={e => setAssignedTo(e.target.value)} placeholder="Email of Lead Engineer" className="h-16 rounded-2xl bg-slate-50/50 border-border font-black placeholder:font-medium placeholder:text-muted-foreground/20 text-sm p-6 focus-visible:bg-white focus-visible:ring-primary/20 transition-all font-sans" />
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-2 italic">Scheduled Tactical Launch</Label>
+                                                    <Input type="date" value={scheduledStartDate} onChange={e => setScheduledStartDate(e.target.value)} className="h-16 rounded-2xl bg-slate-50/50 border-border font-black text-sm p-6 focus-visible:bg-white focus-visible:ring-primary/20 transition-all font-sans" />
                                                 </div>
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Administrative Notes</Label>
-                                                <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Specific operational instructions..." rows={3} className="rounded-xl bg-slate-50 border-border font-bold p-4 text-sm" />
+                                            <div className="space-y-3">
+                                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-2 italic">Strategic Operational Directives</Label>
+                                                <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Specify critical constraints or tactical requirements for the restoration engineer..." rows={4} className="rounded-[1.8rem] bg-slate-50/50 border-border font-bold p-8 text-sm placeholder:font-medium placeholder:text-muted-foreground/20 focus-visible:bg-white focus-visible:ring-primary/20 transition-all font-sans shadow-inner" />
                                             </div>
                                         </div>
 
-                                        <div className="flex gap-3 mt-4">
-                                            <Button onClick={handleAssign} disabled={saving || !assignedTo} className="flex-1 h-14 bg-primary hover:bg-primary/95 text-primary-foreground font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/10 text-[10px]">
-                                                <Wrench className="w-4 h-4 mr-2" /> Assign Personnel
+                                        <div className="flex flex-col md:flex-row gap-5 mt-6">
+                                            <Button onClick={handleAssign} disabled={saving || !assignedTo} className="flex-[2] h-20 bg-primary hover:bg-primary/95 text-primary-foreground font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-primary/20 text-[11px] transition-all active:scale-[0.98] group">
+                                                <Wrench className="w-5 h-5 mr-3 group-hover:rotate-45 transition-transform" /> {saving ? "SYNCHRONIZING..." : "Authorize Restoration Command"}
                                             </Button>
                                             {selected.status === 'Pending' && (
-                                                <Button onClick={() => updateStatus(selected.id, 'Rejected', { principal_notes: notes })} variant="outline" disabled={saving} className="flex-1 h-14 border-border text-rose-600 hover:bg-rose-50 font-black uppercase tracking-widest rounded-xl text-[10px] transition-all">
-                                                    Reject Case
+                                                <Button onClick={() => updateStatus(selected.id, 'Rejected', { principal_notes: notes })} variant="outline" disabled={saving} className="flex-1 h-20 border-border text-rose-600 hover:bg-rose-50 font-black uppercase tracking-[0.2em] rounded-2xl text-[11px] transition-all active:scale-[0.98] italic">
+                                                    Seal & Reject Case
                                                 </Button>
                                             )}
                                         </div>
