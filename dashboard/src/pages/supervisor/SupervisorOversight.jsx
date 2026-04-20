@@ -1,255 +1,230 @@
-// @ts-nocheck
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { 
+    Eye, Search, Filter, ArrowUpRight, 
+    ShieldAlert, Activity, CheckCircle2, 
+    School, Package, AlertTriangle 
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
-import { AlertTriangle, TrendingUp, ShieldAlert, MapPin, Clock, CalendarDays } from 'lucide-react';
-import { isBefore, parseISO, isAfter } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import StatusBadge from '../../components/StatusBadge';
-import StatsCard from '../../components/StatsCard';
-import { format, subDays } from 'date-fns';
-
-const COLORS = ['#0d9488', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export default function SupervisorOversight() {
     const { currentUser } = useAuth();
-    const role = currentUser?.role || 'supervisor';
+    const [assets, setAssets] = useState([]);
     const [requests, setRequests] = useState([]);
-    const [tasks, setTasks] = useState([]);
     const [schools, setSchools] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filterSchool, setFilterSchool] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        const unsubRequests = onSnapshot(
-            query(collection(db, 'repair_requests'), orderBy('created_at', 'desc')),
-            (snap) => setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-        );
-        const unsubTasks = onSnapshot(
-            query(collection(db, 'maintenance_tasks'), orderBy('created_at', 'desc')),
-            (snap) => setTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-        );
-        const unsubSchools = onSnapshot(
-            collection(db, 'schools'),
-            (snap) => {
-                setSchools(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-                setLoading(false);
-            }
-        );
-        return () => { unsubRequests(); unsubTasks(); unsubSchools(); };
+        // Real-time listeners for strategic oversight
+        const unsubAssets = onSnapshot(query(collection(db, 'assets')), (snapshot) => {
+            setAssets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+        const unsubRequests = onSnapshot(query(collection(db, 'repair_requests')), (snapshot) => {
+            setRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+        const unsubSchools = onSnapshot(query(collection(db, 'schools'), orderBy('name', 'asc')), (snapshot) => {
+            setSchools(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        });
+
+        return () => { unsubAssets(); unsubRequests(); unsubSchools(); };
     }, []);
 
-    // Filter by school if selected
-    const filtered = filterSchool === 'all' 
-        ? requests 
-        : requests.filter(r => r.school_name === filterSchool);
-
-    // Escalation queue - only Escalated status
-    const escalatedRequests = filtered.filter(r => r.status === 'Escalated');
-
-    // Repairs per school
-    const schoolMetrics = schools.map(school => {
-        const schoolRequests = requests.filter(r => r.school_name === school.name);
-        const schoolTasks = tasks.filter(t => t.school_name === school.name);
-        const completedOnTime = schoolTasks.filter(t => t.status === 'Completed' && t.completion_date && t.sla_deadline && !isAfter(parseISO(t.completion_date), parseISO(t.sla_deadline))).length;
-        const totalCompleted = schoolTasks.filter(t => t.status === 'Completed').length;
+    // Oversight Analytics Calculation
+    const getSchoolStats = (schoolId) => {
+        const schoolAssets = assets.filter(a => a.school_id === schoolId);
+        const schoolRequests = requests.filter(r => r.school_id === schoolId);
         
         return {
-            name: school.name,
-            pending: schoolRequests.filter(r => r.status === 'Pending').length,
-            approved: schoolRequests.filter(r => r.status === 'Approved').length,
-            inProgress: schoolRequests.filter(r => r.status === 'In Progress').length,
-            completed: totalCompleted,
-            escalated: schoolRequests.filter(r => r.status === 'Escalated').length,
-            onTimeRate: totalCompleted > 0 ? Math.round((completedOnTime / totalCompleted) * 100) : 0,
-            avgReschedule: schoolTasks.length > 0 ? (schoolTasks.reduce((sum, t) => sum + (t.reschedule_count || 0), 0) / schoolTasks.length).toFixed(1) : 0
+            totalAssets: schoolAssets.length,
+            criticalRequests: schoolRequests.filter(r => r.priority === 'Critical' && r.status !== 'Resolved').length,
+            pendingRequests: schoolRequests.filter(r => r.status === 'Pending').length,
+            healthScore: schoolAssets.length > 0 
+                ? Math.round(((schoolAssets.length - schoolRequests.filter(r => r.status !== 'Resolved').length) / schoolAssets.length) * 100)
+                : 100
         };
-    });
-
-    // Cost tracking by school (actual_cost from tasks)
-    const schoolCosts = schools.map(school => {
-        const schoolRequests = requests.filter(r => r.school_name === school.name);
-        const totalCost = schoolRequests.reduce((sum, r) => {
-            return sum + (parseFloat(r.estimated_cost) || 0);
-        }, 0);
-        return {
-            name: school.name.length > 15 ? school.name.slice(0, 15) + '...' : school.name,
-            cost: totalCost,
-        };
-    }).filter(s => s.cost > 0).sort((a, b) => b.cost - a.cost).slice(0, 8);
-
-    // Status distribution
-    const statusData = ['Pending', 'Approved', 'In Progress', 'Completed', 'Escalated'].map(s => ({
-        name: s,
-        value: filtered.filter(r => r.status === s).length,
-    })).filter(d => d.value > 0);
-
-    // Timeline - repairs over last 14 days
-    const timeline = Array.from({ length: 14 }, (_, i) => {
-        const d = subDays(new Date(), 13 - i);
-        const dateStr = format(d, 'yyyy-MM-dd');
-        return {
-            date: format(d, 'MMM d'),
-            new: filtered.filter(r => r.created_at?.toDate && format(r.created_at.toDate(), 'yyyy-MM-dd') === dateStr).length,
-            completed: filtered.filter(r => r.completed_at?.toDate && format(r.completed_at.toDate(), 'yyyy-MM-dd') === dateStr).length,
-        };
-    });
-
-    const stats = {
-        total: filtered.length,
-        escalated: escalatedRequests.length,
-        avgResolutionTime: (() => {
-            const completed = filtered.filter(r => r.status === 'Completed' && r.created_at?.toDate && r.completed_at?.toDate);
-            if (!completed.length) return 0;
-            const avg = completed.reduce((sum, r) => {
-                const diff = r.completed_at.toDate().getTime() - r.created_at.toDate().getTime();
-                return sum + diff / (1000 * 60 * 60 * 24);
-            }, 0) / completed.length;
-            return Math.round(avg);
-        })(),
-        criticalCount: filtered.filter(r => r.priority === 'Critical' && !['Completed', 'Rejected'].includes(r.status)).length,
     };
 
-    if (loading) {
-        return <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-teal/30 border-t-teal rounded-full animate-spin" /></div>;
-    }
+    const overallStats = {
+        totalAssets: assets.length,
+        activeCrisis: requests.filter(r => r.priority === 'Critical' && r.status !== 'Resolved').length,
+        operationalDelta: requests.filter(r => r.status === 'Pending').length,
+        avgHealth: schools.length > 0 ? Math.round(schools.reduce((acc, s) => acc + getSchoolStats(s.id).healthScore, 0) / schools.length) : 0
+    };
+
+    const containerVariants = {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { staggerChildren: 0.1 } }
+    };
+
+    const itemVariants = {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 }
+    };
 
     return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">Oversight Dashboard</h1>
-                    <p className="text-muted-foreground text-sm mt-1">Multi-school repair monitoring & escalation management</p>
+        <div className="space-y-12 animate-fade-in pb-20 relative z-10 font-sans">
+            {/* Header Area */}
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+                <div className="space-y-1.5">
+                    <h1 className="text-4xl md:text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1]">
+                        Strategic <span className="text-primary italic">Oversight</span>
+                    </h1>
+                    <p className="text-muted-foreground text-lg max-w-2xl font-medium tracking-tight opacity-70">
+                        High-fidelity monitoring of institutional resource health and tactical repair cycles.
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <div className="relative group min-w-[300px]">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <input 
+                            type="text"
+                            placeholder="Filter institutes by name or jurisdiction..."
+                            className="w-full h-14 pl-12 pr-6 bg-white border border-border rounded-2xl text-[13px] font-bold placeholder:font-medium placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-primary/20 shadow-sm"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
                 </div>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <StatsCard title="On-Time Delivery" value={(() => {
-                    const completedTasks = tasks.filter(t => t.status === 'Completed' && t.completion_date && t.sla_deadline);
-                    if (completedTasks.length === 0) return '0%';
-                    const onTimeCount = completedTasks.filter(t => !isAfter(parseISO(t.completion_date), parseISO(t.sla_deadline))).length;
-                    return Math.round((onTimeCount / completedTasks.length) * 100) + '%';
-                })()} icon={Clock} color="text-teal-600 bg-teal-100" />
-                <StatsCard title="Avg Reschedules" value={(() => {
-                    if (tasks.length === 0) return '0.0';
-                    const avg = tasks.reduce((sum, t) => sum + (t.reschedule_count || 0), 0) / tasks.length;
-                    return avg.toFixed(1);
-                })()} icon={CalendarDays} color="text-amber-600 bg-amber-100" />
-                <StatsCard title="Escalated" value={stats.escalated} icon={ShieldAlert} color="text-red-600 bg-red-100" />
-                <StatsCard title="Critical Open" value={stats.criticalCount} icon={AlertTriangle} color="text-orange-600 bg-orange-100" />
-            </div>
-
-            {/* School Filter */}
-            <div className="flex gap-2 flex-wrap">
-                <Button 
-                    onClick={() => setFilterSchool('all')}
-                    variant={filterSchool === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    className={filterSchool === 'all' ? 'bg-teal hover:bg-teal/90 text-white' : ''}
-                >
-                    All Schools
-                </Button>
-                {schools.map(school => (
-                    <Button 
-                        key={school.id}
-                        onClick={() => setFilterSchool(school.name)}
-                        variant={filterSchool === school.name ? 'default' : 'outline'}
-                        size="sm"
-                        className={filterSchool === school.name ? 'bg-teal hover:bg-teal/90 text-white' : ''}
+            {/* Strategic Metrics Grid */}
+            <motion.div 
+                variants={containerVariants}
+                initial="initial"
+                animate="animate"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            >
+                {[
+                    { label: 'Asset Inventory', value: overallStats.totalAssets, icon: Package, color: 'text-primary' },
+                    { label: 'Active Crisis', value: overallStats.activeCrisis, icon: ShieldAlert, color: 'text-rose-600' },
+                    { label: 'Operational Delta', value: overallStats.operationalDelta, icon: Activity, color: 'text-amber-500' },
+                    { label: 'Jurisdictional Health', value: `${overallStats.avgHealth}%`, icon: CheckCircle2, color: 'text-emerald-500' }
+                ].map((stat, i) => (
+                    <motion.div 
+                        key={i}
+                        variants={itemVariants}
+                        className="bg-white rounded-[2.5rem] border border-border p-8 shadow-sm flex flex-col gap-4 group hover:shadow-xl transition-all"
                     >
-                        {school.name.slice(0, 12)}
-                    </Button>
+                        <div className="flex items-center justify-between">
+                            <stat.icon className={cn("w-8 h-8", stat.color)} />
+                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                        </div>
+                        <div className="space-y-0.5">
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 italic">{stat.label}</span>
+                            <div className="text-4xl font-serif font-black text-foreground tracking-tighter">{stat.value}</div>
+                        </div>
+                    </motion.div>
                 ))}
-            </div>
+            </motion.div>
 
-            {/* Main Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Status Distribution */}
-                <div className="bg-card rounded-2xl border border-border p-6">
-                    <h3 className="font-semibold text-foreground mb-4">Status Distribution</h3>
-                    <ResponsiveContainer width="100%" height={250}>
-                        <PieChart>
-                            <Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value" label>
-                                {statusData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
-                            </Pie>
-                            <Tooltip />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </div>
-
-                {/* On-Time Performance by School */}
-                <div className="bg-card rounded-2xl border border-border p-6 lg:col-span-2">
-                    <h3 className="font-semibold text-foreground mb-4">On-Time Performance (%)</h3>
-                    <ResponsiveContainer width="100%" height={250}>
-                        <BarChart data={schoolMetrics.slice(0, 6)}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" fontSize={10} interval={0} />
-                            <YAxis domain={[0, 100]} />
-                            <Tooltip />
-                            <Bar dataKey="onTimeRate" name="On-Time %" fill="#0d9488" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-
-            {/* Escalation Queue */}
-            {escalatedRequests.length > 0 && (
-                <div className="bg-red-50 rounded-2xl border border-red-200 p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <AlertTriangle className="w-5 h-5 text-red-600" />
-                        <h3 className="font-semibold text-foreground">Escalation Queue ({escalatedRequests.length})</h3>
+            {/* Jurisdictional Grid */}
+            <div className="space-y-6">
+                <div className="flex items-center justify-between px-2">
+                    <h3 className="text-xl font-serif font-black text-foreground">Institutional <span className="text-primary italic">Status Registry</span></h3>
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 italic flex items-center gap-2">Real-time Stream <Activity className="w-3 h-3" /></span>
                     </div>
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                        {escalatedRequests.map(req => (
-                            <div key={req.id} className="flex items-start gap-3 bg-white p-3 rounded-lg border border-red-100">
-                                <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-sm text-foreground">{req.asset_name}</p>
-                                    <p className="text-xs text-muted-foreground">{req.school_name}</p>
-                                    <p className="text-xs text-red-600 mt-1">{req.escalated_reason}</p>
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                    {loading ? (
+                        Array(4).fill(0).map((_, i) => (
+                            <div key={i} className="h-64 rounded-[2.5rem] bg-slate-50 animate-pulse border border-border" />
+                        ))
+                    ) : schools.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((school, idx) => {
+                        const stats = getSchoolStats(school.id);
+                        return (
+                            <motion.div 
+                                key={school.id}
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: idx * 0.1 }}
+                                className="bg-white rounded-[2.5rem] border border-border overflow-hidden group hover:shadow-2xl transition-all duration-500"
+                            >
+                                <div className="p-8 lg:p-10 flex flex-col md:flex-row gap-10">
+                                    {/* Left: Info */}
+                                    <div className="flex-1 space-y-6">
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-border text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                                                    <School className="w-6 h-6" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-2xl font-serif font-black text-foreground tracking-tight leading-none truncate max-w-[250px]">{school.name}</h4>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 italic">{school.division || 'Jurisdiction Pending'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-6 pt-2">
+                                            <div className="space-y-1">
+                                                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Total Inventory</span>
+                                                <div className="text-xl font-bold text-foreground flex items-center gap-2">
+                                                    {stats.totalAssets}
+                                                    <Package className="w-3.5 h-3.5 text-primary/30" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Priority Events</span>
+                                                <div className={cn(
+                                                    "text-xl font-bold flex items-center gap-2",
+                                                    stats.criticalRequests > 0 ? "text-rose-600" : "text-foreground"
+                                                )}>
+                                                    {stats.criticalRequests}
+                                                    <ShieldAlert className={cn("w-3.5 h-3.5", stats.criticalRequests > 0 ? "text-rose-600" : "text-muted-foreground/20")} />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 flex gap-3">
+                                            <button className="h-10 px-5 rounded-xl bg-slate-50 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-primary hover:text-white transition-all">
+                                                Full Analytics
+                                            </button>
+                                            <button className="h-10 px-5 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-slate-50 transition-all">
+                                                Contact Lead
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Score Gauge */}
+                                    <div className="flex flex-col items-center justify-center gap-2 px-8 py-6 bg-slate-50/50 rounded-[2rem] border border-border/50 min-w-[160px]">
+                                        <div className="relative w-24 h-24 flex items-center justify-center">
+                                            <svg className="w-full h-full transform -rotate-90">
+                                                <circle
+                                                    cx="48" cy="48" r="42"
+                                                    fill="none" stroke="currentColor"
+                                                    strokeWidth="8" className="text-slate-200"
+                                                />
+                                                <motion.circle
+                                                    cx="48" cy="48" r="42"
+                                                    fill="none" stroke="currentColor"
+                                                    strokeWidth="8" strokeLinecap="round"
+                                                    strokeDasharray={264}
+                                                    initial={{ strokeDashoffset: 264 }}
+                                                    animate={{ strokeDashoffset: 264 - (264 * stats.healthScore) / 100 }}
+                                                    transition={{ duration: 1.5, ease: "easeOut" }}
+                                                    className={cn(
+                                                        stats.healthScore > 80 ? "text-emerald-500" : stats.healthScore > 50 ? "text-amber-500" : "text-rose-600"
+                                                    )}
+                                                />
+                                            </svg>
+                                            <span className="absolute text-2xl font-serif font-black text-foreground tracking-tighter">{stats.healthScore}%</span>
+                                        </div>
+                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1 italic">Score Integrity</span>
+                                    </div>
                                 </div>
-                                <StatusBadge status={req.priority} />
-                            </div>
-                        ))}
-                    </div>
+                            </motion.div>
+                        );
+                    })}
                 </div>
-            )}
-
-            {/* Timeline Chart */}
-            <div className="bg-card rounded-2xl border border-border p-6">
-                <h3 className="font-semibold text-foreground mb-4">Repair Activity (Last 14 Days)</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={timeline}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" fontSize={12} />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Line type="monotone" dataKey="new" stroke="#3b82f6" name="New Repairs" strokeWidth={2} />
-                        <Line type="monotone" dataKey="completed" stroke="#10b981" name="Completed" strokeWidth={2} />
-                    </LineChart>
-                </ResponsiveContainer>
             </div>
-
-            {/* Costs by School */}
-            {schoolCosts.length > 0 && (
-                <div className="bg-card rounded-2xl border border-border p-6">
-                    <h3 className="font-semibold text-foreground mb-4">Resource Allocation (Estimated Costs)</h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={schoolCosts} layout="vertical">
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis type="number" />
-                            <YAxis dataKey="name" type="category" width={120} fontSize={11} />
-                            <Tooltip formatter={(value) => `PHP ${value}`} />
-                            <Bar dataKey="cost" fill="#0d9488" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            )}
         </div>
     );
 }
