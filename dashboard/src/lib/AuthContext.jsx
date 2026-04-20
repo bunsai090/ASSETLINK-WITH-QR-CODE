@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { base44 } from '../api/base44Client';
+
 
 const AuthContext = createContext(null);
 
@@ -18,11 +18,8 @@ export const AuthProvider = ({ children }) => {
             setIsLoadingAuth(true);
             if (firebaseUser) {
                 try {
-                    // Sync token with Base44 API client
-                    const idToken = await firebaseUser.getIdToken();
-                    base44.auth.setToken(idToken);
-
                     // Fetch additional user data (like role) from Firestore
+
                     const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
                     
                     if (userDoc.exists()) {
@@ -47,10 +44,10 @@ export const AuthProvider = ({ children }) => {
                     setAuthError({ type: 'data_fetch_error', message: error.message });
                 }
             } else {
-                base44.auth.setToken(null);
                 setUser(null);
                 setIsAuthenticated(false);
             }
+
             setIsLoadingAuth(false);
         });
 
