@@ -19,7 +19,7 @@ import DashboardPrincipal from './pages/principal/Dashboard';
 // Admin/System Pages
 import Assets from './pages/admin/Assets';
 import Analytics from './pages/admin/Analytics';
-import Schools from './pages/Schools';
+import Schools from './pages/admin/Schools';
 
 // Repair & Damage Pages
 import RepairRequestsTeacher from './pages/teacher/RepairRequests';
@@ -32,7 +32,7 @@ import MaintenanceCalendar from './pages/maintenance/MaintenanceCalendar';
 
 // Supervisor Pages
 import DashboardSupervisor from './pages/supervisor/Dashboard';
-import SupervisorOversight from './pages/SupervisorOversight';
+import SupervisorOversight from './pages/supervisor/SupervisorOversight';
 
 // Public Pages
 import AssetPublic from './pages/public/AssetPublic';
