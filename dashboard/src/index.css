@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Fira+Code:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,71 +6,75 @@
 
 @layer base {
     :root {
-        /* AssetLink — premium education palette sync */
-        --background: 40 33% 98.5%; /* Soft Cream */
-        --foreground: 220 20% 12%;
+        /* AssetLink — education / civic-tech palette (Matching Landing Page) */
+        --background: 45 20% 98%;
+        --foreground: 160 50% 10%;
         --card: 0 0% 100%;
-        --card-foreground: 220 20% 12%;
+        --card-foreground: 160 50% 10%;
         --popover: 0 0% 100%;
-        --popover-foreground: 220 20% 12%;
-        --primary: 172 75% 17%; /* Deep Forest Green */
-        --primary-foreground: 0 0% 100%;
-        --secondary: 40 20% 95%;
-        --secondary-foreground: 172 75% 17%;
-        --muted: 40 20% 95%;
-        --muted-foreground: 220 10% 45%;
-        --accent: 38 92% 50%; /* Warm Amber */
-        --accent-foreground: 220 20% 12%;
-        --destructive: 0 84.2% 60.2%;
+        --popover-foreground: 160 50% 10%;
+        --primary: 160 80% 20%;
+        --primary-foreground: 45 20% 98%;
+        --secondary: 160 20% 94%;
+        --secondary-foreground: 160 50% 10%;
+        --muted: 160 20% 94%;
+        --muted-foreground: 160 20% 45%;
+        --accent: 35 90% 55%;
+        --accent-foreground: 0 0% 100%;
+        --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 98%;
-        --border: 40 10% 90%;
-        --input: 40 10% 90%;
-        --ring: 172 75% 17%;
-        /* Modernized Radius */
-        --radius: 1rem;
-        --sidebar-background: 172 75% 10%; /* Deepest Forest for Sidebar */
-        --sidebar-foreground: 40 33% 98%;
-        --sidebar-primary: 172 75% 17%;
-        --sidebar-primary-foreground: 0 0% 100%;
-        --sidebar-accent: 172 75% 25%;
-        --sidebar-accent-foreground: 0 0% 100%;
-        --sidebar-border: 172 75% 15%;
-        --sidebar-ring: 172 75% 17%;
+        --border: 160 15% 90%;
+        --input: 160 15% 90%;
+        --ring: 160 80% 20%;
+        --radius: 0.5rem;
+        
+        /* Sidebar: Deep Green */
+        --sidebar-background: 160 60% 8%;
+        --sidebar-foreground: 160 20% 85%;
+        --sidebar-primary: 160 80% 25%;
+        --sidebar-primary-foreground: 45 20% 98%;
+        --sidebar-accent: 160 40% 14%;
+        --sidebar-accent-foreground: 160 20% 95%;
+        --sidebar-border: 160 40% 14%;
+        --sidebar-ring: 160 80% 25%;
+        
+        /* TypeUI data colors */
+        --amber: 35 90% 55%;
+        --teal: 160 80% 25%;
+        --rose: 0 84% 60%;
     }
 
     .dark {
-        --background: 222 30% 8%;
-        --foreground: 210 20% 95%;
-        --card: 222 25% 11%;
-        --card-foreground: 210 20% 95%;
-        --popover: 222 25% 11%;
-        --popover-foreground: 210 20% 95%;
-        --primary: 174 72% 40%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 222 25% 16%;
-        --secondary-foreground: 210 20% 95%;
-        --muted: 222 25% 16%;
-        --muted-foreground: 220 10% 55%;
-        --accent: 222 25% 16%;
-        --accent-foreground: 210 20% 95%;
-        --destructive: 0 62.8% 50%;
+        --background: 160 50% 6%;
+        --foreground: 160 20% 98%;
+        --card: 160 40% 9%;
+        --card-foreground: 160 20% 98%;
+        --popover: 160 40% 9%;
+        --popover-foreground: 160 20% 98%;
+        --primary: 160 80% 30%;
+        --primary-foreground: 160 50% 6%;
+        --secondary: 160 40% 13%;
+        --secondary-foreground: 160 20% 98%;
+        --muted: 160 40% 13%;
+        --muted-foreground: 160 20% 65%;
+        --accent: 35 90% 55%;
+        --accent-foreground: 0 0% 100%;
+        --destructive: 0 62% 50%;
         --destructive-foreground: 0 0% 98%;
-        --border: 222 25% 18%;
-        --input: 222 25% 18%;
-        --ring: 174 72% 40%;
-        --teal: 174 72% 40%;
-        --sidebar-background: 222 30% 7%;
-        --sidebar-foreground: 210 15% 80%;
-        --sidebar-primary: 174 72% 40%;
-        --sidebar-primary-foreground: 0 0% 100%;
-        --sidebar-accent: 222 25% 14%;
-        --sidebar-accent-foreground: 210 20% 95%;
-        --sidebar-border: 222 25% 14%;
-        --sidebar-ring: 174 72% 40%;
+        --border: 160 40% 15%;
+        --input: 160 40% 15%;
+        --ring: 160 80% 30%;
+        --teal: 160 80% 30%;
+        --sidebar-background: 160 50% 6%;
+        --sidebar-foreground: 160 20% 65%;
+        --sidebar-primary: 160 80% 30%;
+        --sidebar-primary-foreground: 160 50% 6%;
+        --sidebar-accent: 160 40% 11%;
+        --sidebar-accent-foreground: 160 20% 90%;
+        --sidebar-border: 160 40% 12%;
+        --sidebar-ring: 160 80% 30%;
     }
 }
-
-
 
 @layer base {
     * {
@@ -80,36 +84,27 @@
     body {
         @apply bg-background text-foreground;
         font-family: 'Inter', sans-serif;
+        font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+        -webkit-font-smoothing: antialiased;
     }
 
     .font-serif {
-        font-family: 'Fraunces', serif;
+        font-family: 'Geist', sans-serif;
+        font-weight: 700;
+    }
+
+    .font-mono {
+        font-family: 'Geist Mono', monospace;
     }
 
     .font-code {
-        font-family: 'Fira Code', monospace;
+        font-family: 'Geist Mono', monospace;
     }
 }
 
-@keyframes fade-in {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animate-fade-in {
-    animation: fade-in 0.3s ease-out;
-}
-
-/* Custom Scrollbar */
+/* TypeUI: Scrollbar — minimal and clean */
 .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
+    width: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -117,18 +112,114 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
+    background: rgba(255,255,255,0.08);
     border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #cbd5e1;
+    background: rgba(255,255,255,0.15);
 }
 
-/* Subtle grid backdrop used behind hero / role preview */
+/* TypeUI: Dot-grid background (infrastructural feel) */
 .al-grid-bg {
-    background-image:
-      linear-gradient(to right, color-mix(in oklch, var(--foreground) 5%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 5%, transparent) 1px, transparent 1px);
-    background-size: 48px 48px;
+    background-image: radial-gradient(
+        circle,
+        color-mix(in oklch, var(--foreground) 8%, transparent) 1px,
+        transparent 1px
+    );
+    background-size: 24px 24px;
+}
+
+/* TypeUI: Status indicator pulse */
+@keyframes status-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.status-pulse {
+    animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* TypeUI: Fade-in entry */
+@keyframes fade-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up {
+    animation: fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* TypeUI: Data row hover shimmer */
+.data-row {
+    position: relative;
+    transition: background 0.15s ease;
+}
+
+.data-row::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: transparent;
+    transition: background 0.15s ease;
+    pointer-events: none;
+}
+
+.data-row:hover::after {
+    background: rgba(0,0,0,0.025);
+}
+
+/* TypeUI: Mono label style */
+.label-mono {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+}
+
+/* TypeUI: Stat number display */
+.stat-number {
+    font-family: 'Geist', sans-serif;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+}
+
+/* Sidebar nav item */
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.12s ease;
+    color: hsl(var(--sidebar-foreground));
+    position: relative;
+}
+
+.nav-item:hover {
+    background: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground));
+}
+
+.nav-item.active {
+    background: hsl(var(--sidebar-accent));
+    color: #fff;
+}
+
+.nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 16px;
+    background: hsl(var(--sidebar-primary));
+    border-radius: 0 2px 2px 0;
 }
