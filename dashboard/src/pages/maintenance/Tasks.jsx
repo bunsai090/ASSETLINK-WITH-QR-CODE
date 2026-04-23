@@ -13,8 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { sileo } from 'sileo';
 import { format } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { Search } from 'lucide-react';
 
 const TASK_STATUSES = ['Assigned', 'In Progress', 'On Hold', 'Completed', 'Pending Teacher Verification'];
 
@@ -121,7 +121,9 @@ export default function Tasks() {
         const rawFile = e.target.files[0];
         if (!rawFile) return;
 
+        // @ts-ignore
         const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+        // @ts-ignore
         const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
         if (cloudName === 'your_cloud_name' || !cloudName) {
@@ -223,166 +225,116 @@ export default function Tasks() {
         }
     }
 
+    const [search, setSearch] = useState('');
+
     const displayed = tasks.filter(t => {
+        const matchSearch = t.asset_name?.toLowerCase().includes(search.toLowerCase()) || 
+                            t.school_name?.toLowerCase().includes(search.toLowerCase()) ||
+                            t.request_number?.toLowerCase().includes(search.toLowerCase());
+        
+        if (!matchSearch) return false;
         if (filterStatus === 'all') return true;
         if (filterStatus === 'Completed') {
             return t.status === 'Completed' || t.status === 'Pending Teacher Verification';
         }
         return t.status === filterStatus;
     });
-    const counts = {
-        Assigned: tasks.filter(t => t.status === 'Assigned').length,
-        'In Progress': tasks.filter(t => t.status === 'In Progress').length,
-        Completed: tasks.filter(t => t.status === 'Pending Teacher Verification' || t.status === 'Completed').length,
-    };
-
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1,
-                delayChildren: 0.1
-            }
-        }
-    };
-
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: 'spring', stiffness: 300, damping: 24 }
-        }
-    };
 
     return (
-        <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-12 pb-20 relative z-10"
-        >
-            <motion.div variants={itemVariants} className="px-1">
-                <h1 className="text-4xl md:text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1]">
-                    Service <span className="text-primary italic">Record</span>
-                </h1>
-                <p className="text-muted-foreground text-lg mt-2 font-medium tracking-tight opacity-70">
-                    Manage and synchronize your assigned school restoration protocols.
-                </p>
-            </motion.div>
+        <div className="space-y-6 max-w-6xl mx-auto pb-12">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-semibold text-foreground tracking-tight">Service Record</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Manage and synchronize your assigned school restoration protocols.
+                    </p>
+                </div>
+            </div>
 
-            <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                {[
-                    { label: 'Assigned', count: counts.Assigned, icon: Clock, color: 'text-blue-600 bg-blue-50/50 border-blue-100' },
-                    { label: 'Active', count: counts['In Progress'], icon: Wrench, color: 'text-amber-600 bg-amber-50/50 border-amber-100' },
-                    { label: 'Completed', count: counts.Completed, icon: CheckCircle, color: 'text-emerald-600 bg-emerald-50/50 border-emerald-100' },
-                ].map(({ label, count, icon: Icon, color }) => (
-                    <motion.div 
-                        whileHover={{ y: -5 }}
-                        key={label} 
-                        className={cn("rounded-[2.5rem] border p-8 text-center transition-all duration-500", color)}
-                    >
-                        <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center mx-auto mb-4 shadow-sm border border-black/5">
-                            <Icon className="w-7 h-7" />
-                        </div>
-                        <p className="text-4xl font-serif font-black tracking-tighter leading-none">{count}</p>
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 mt-3">{label}</p>
-                    </motion.div>
-                ))}
-            </motion.div>
-
-            <motion.div variants={itemVariants} className="flex items-center gap-4 bg-white p-2 rounded-[1.5rem] border border-border w-fit shadow-sm">
+            <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Filter by asset, school, or request number..." 
+                        className="pl-9 h-9 bg-white border-border text-sm w-full focus-visible:ring-1 focus-visible:ring-primary/50" 
+                        value={search} 
+                        onChange={e => setSearch(e.target.value)} 
+                    />
+                </div>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-64 h-12 bg-transparent border-none font-black text-[10px] uppercase tracking-widest px-6 focus:ring-0">
-                        <div className="flex items-center gap-2">
-                            <Shield className="w-4 h-4 text-primary" />
-                            <SelectValue placeholder="Registry State" />
-                        </div>
+                    <SelectTrigger className="w-full sm:w-[180px] h-9 bg-white text-sm">
+                        <SelectValue placeholder="All Statuses" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-border">
-                        <SelectItem value="all" className="text-[10px] font-black uppercase tracking-widest">Universal Record</SelectItem>
-                        {TASK_STATUSES.map(s => <SelectItem key={s} value={s} className="text-[10px] font-black uppercase tracking-widest">{s}</SelectItem>)}
+                    <SelectContent>
+                        <SelectItem value="all">Universal Record</SelectItem>
+                        {TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                 </Select>
-            </motion.div>
+            </div>
 
-            {loading ? (
-                <div className="flex justify-center py-40">
-                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 gap-6">
-                    {displayed.length === 0 ? (
-                        <motion.div variants={itemVariants} className="text-center py-40 bg-white rounded-[2.5rem] border border-dashed border-border flex flex-col items-center justify-center">
-                            <Wrench className="w-20 h-20 mx-auto mb-6 text-primary opacity-10" />
-                            <h3 className="text-2xl font-serif font-black text-foreground tracking-tight italic">Clear Workload</h3>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] mt-2 text-muted-foreground opacity-60">No maintenance protocols encountered in your schedule</p>
-                        </motion.div>
-                    ) : (
-                        displayed.map((task, idx) => (
-                            <motion.div
-                                variants={itemVariants}
-                                key={task.id}
-                                onClick={() => openTask(task)}
-                                className="bg-white rounded-[2.5rem] border border-border p-8 hover:shadow-[0_20px_50px_rgb(0,0,0,0.06)] hover:bg-slate-50/50 hover:border-primary/20 transition-all cursor-pointer group"
-                            >
-                                <div className="flex flex-col md:flex-row md:items-center gap-8">
-                                    <div className="w-20 h-20 rounded-[1.5rem] bg-slate-50 flex items-center justify-center text-muted-foreground/30 group-hover:bg-primary group-hover:text-white transition-all duration-500 flex-shrink-0 shadow-inner group-hover:shadow-lg group-hover:shadow-primary/20">
-                                        <Wrench className="w-10 h-10" />
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+                {loading ? (
+                    <div className="p-12 flex justify-center">
+                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    </div>
+                ) : displayed.length === 0 ? (
+                    <div className="p-12 text-center text-sm text-muted-foreground">
+                        No maintenance protocols encountered in your schedule.
+                    </div>
+                ) : (
+                    <div className="divide-y divide-border">
+                        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 bg-muted/30">
+                            <span className="label-mono">Asset & Request</span>
+                            <span className="label-mono hidden sm:block">Priority</span>
+                            <span className="label-mono">Status</span>
+                            <span className="label-mono hidden sm:block">Date</span>
+                        </div>
+                        {displayed.map(task => (
+                            <div key={task.id} onClick={() => openTask(task)} className="data-row grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-5 py-3 hover:bg-muted/30 transition-colors cursor-pointer">
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-sm font-medium text-foreground truncate">{task.asset_name}</p>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-4 flex-wrap mb-3">
-                                            <h3 className="text-2xl font-serif font-black text-foreground tracking-tight group-hover:text-primary transition-colors leading-none">{task.asset_name}</h3>
-                                            <div className="flex items-center gap-2">
-                                                <StatusBadge status={task.priority || 'Medium'} size="xs" />
-                                                <StatusBadge status={task.status} size="xs" />
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-4 text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">
-                                            <span className="flex items-center gap-2 italic">{task.school_name || 'Assigned School'}</span>
-                                            {task.request_number && (
-                                                <div className="flex items-center gap-2 px-3 py-1 bg-primary/5 text-primary rounded-full border border-primary/10">
-                                                    SYNC # {task.request_number}
-                                                </div>
-                                            )}
-                                        </div>
-                                        {task.notes && <p className="text-xs text-muted-foreground/60 mt-6 italic font-medium leading-relaxed border-l-2 border-slate-100 pl-4 group-hover:border-primary/20 transition-colors">"{task.notes}"</p>}
-                                    </div>
-                                    <div className="flex md:flex-col items-center md:items-end justify-between md:justify-center gap-4 shrink-0">
-                                        <div className="text-[10px] font-black text-muted-foreground/20 uppercase tracking-[0.3em] font-sans">
-                                            {task.created_at?.toDate ? format(task.created_at.toDate(), 'MMM d, yyyy') : 'Recent'}
-                                        </div>
-                                        <div className="w-12 h-12 rounded-full border border-border flex items-center justify-center group-hover:bg-primary group-hover:border-primary group-hover:text-white transition-all duration-500">
-                                            <ArrowRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
-                                        </div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <p className="text-xs text-muted-foreground truncate">{task.school_name}</p>
+                                        <span className="text-[10px] text-muted-foreground/60">•</span>
+                                        <p className="text-xs text-muted-foreground font-mono">{task.request_number}</p>
                                     </div>
                                 </div>
-                            </motion.div>
-                        ))
-                    )}
-                </div>
-            )}
+                                <div className="hidden sm:block">
+                                    <StatusBadge status={task.priority || 'Medium'} size="xs" />
+                                </div>
+                                <div>
+                                    <StatusBadge status={task.status} size="xs" />
+                                </div>
+                                <div className="hidden sm:block text-xs text-muted-foreground">
+                                    {task.created_at?.toDate ? format(task.created_at.toDate(), 'MMM d, yyyy') : 'Recent'}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
 
-            <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-                <DialogContent className="sm:max-w-md rounded-2xl border-none">
+            <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
+                <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="text-xl font-bold tracking-tight">Update Service Record</DialogTitle>
+                        <DialogTitle>Update Service Record</DialogTitle>
                     </DialogHeader>
                     {selected && (
-                        <div className="space-y-6 pt-2">
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                <p className="font-black text-slate-800 text-sm uppercase tracking-tight">{selected.asset_name}</p>
-                                <p className="text-xs font-bold text-slate-400 mt-0.5">{selected.school_name} | Ref: {selected.request_number}</p>
+                        <div className="space-y-4 pt-2">
+                            <div className="bg-muted p-3 rounded-md border border-border">
+                                <p className="text-sm font-medium text-foreground">{selected.asset_name}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{selected.school_name} | Ref: {selected.request_number}</p>
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Problem Reported</Label>
-                                <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
-                                    <p className="text-sm font-medium text-amber-900 italic leading-relaxed">
+                                <Label>Problem Reported</Label>
+                                <div className="bg-amber-500/10 p-3 rounded-md border border-amber-500/20">
+                                    <p className="text-sm text-foreground">
                                         "{selected.description || 'No description provided'}"
                                     </p>
-                                    <p className="text-[10px] font-bold text-amber-700 mt-2 text-right">
+                                    <p className="text-xs text-muted-foreground mt-2 text-right">
                                         — Reported by {selected.reported_by_name || 'Teacher'}
                                     </p>
                                 </div>
@@ -390,8 +342,8 @@ export default function Tasks() {
 
                             {selected.photo_url && (
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Damage Evidence</Label>
-                                    <div className="rounded-xl overflow-hidden border border-slate-200">
+                                    <Label>Damage Evidence</Label>
+                                    <div className="rounded-md overflow-hidden border border-border">
                                         <img src={selected.photo_url} alt="Evidence" className="w-full h-auto object-cover max-h-[200px]" />
                                     </div>
                                 </div>
@@ -399,27 +351,27 @@ export default function Tasks() {
 
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Task Completion Proof</Label>
+                                    <Label>Task Completion Proof</Label>
                                     {form.completion_photo ? (
-                                        <div className="relative group rounded-xl overflow-hidden border border-teal-200">
+                                        <div className="relative group rounded-md overflow-hidden border border-border">
                                             <img src={form.completion_photo} alt="Proof" className="w-full h-auto object-cover max-h-[150px]" />
-                                            <button onClick={() => setForm({...form, completion_photo: ''})} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => setForm({...form, completion_photo: ''})} className="absolute top-2 right-2 bg-destructive text-destructive-foreground p-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <X className="w-4 h-4" />
                                             </button>
                                         </div>
                                     ) : (
-                                        <div className="relative border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer group">
+                                        <div className="relative border-2 border-dashed border-border rounded-md p-6 text-center hover:bg-muted transition-colors cursor-pointer group">
                                             <input type="file" accept="image/*" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" disabled={uploading} />
                                             <div className="flex flex-col items-center gap-2">
                                                 {uploading ? (
                                                     <div className="flex flex-col items-center">
-                                                        <div className="w-8 h-8 border-4 border-teal/20 border-t-teal rounded-full animate-spin mb-2" />
-                                                        <span className="text-xs font-bold text-teal">{Math.round(uploadProgress)}% Uploading...</span>
+                                                        <div className="w-5 h-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin mb-2" />
+                                                        <span className="text-xs text-muted-foreground">{Math.round(uploadProgress)}% Uploading...</span>
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        <UploadCloud className="w-8 h-8 text-slate-300 group-hover:text-teal transition-colors" />
-                                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Click to upload proof</span>
+                                                        <UploadCloud className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                                                        <span className="text-xs text-muted-foreground">Click to upload proof</span>
                                                     </>
                                                 )}
                                             </div>
@@ -428,9 +380,9 @@ export default function Tasks() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Current Progress</Label>
+                                    <Label>Current Progress</Label>
                                     <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
-                                        <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             {TASK_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                         </SelectContent>
@@ -438,29 +390,29 @@ export default function Tasks() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Service Notes / Remarks</Label>
-                                    <Textarea rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="What was done to the asset?" className="rounded-xl bg-slate-50 focus:bg-white min-h-[100px]" />
+                                    <Label>Service Notes / Remarks</Label>
+                                    <Textarea rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="What was done to the asset?" className="h-auto min-h-[80px]" />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Materials Used</Label>
-                                        <Input value={form.materials_used} onChange={e => setForm({ ...form, materials_used: e.target.value })} placeholder="Nails, Wire, etc." className="h-11 rounded-xl bg-slate-50 focus:bg-white" />
+                                        <Label>Materials Used</Label>
+                                        <Input value={form.materials_used} onChange={e => setForm({ ...form, materials_used: e.target.value })} placeholder="Nails, Wire, etc." className="h-9" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Total Cost (₱)</Label>
-                                        <Input type="number" value={form.actual_cost} onChange={e => setForm({ ...form, actual_cost: e.target.value })} placeholder="0.00" className="h-11 rounded-xl bg-slate-50 focus:bg-white" />
+                                        <Label>Total Cost (₱)</Label>
+                                        <Input type="number" value={form.actual_cost} onChange={e => setForm({ ...form, actual_cost: e.target.value })} placeholder="0.00" className="h-9" />
                                     </div>
                                 </div>
                             </div>
 
-                            <Button onClick={handleUpdate} disabled={saving} className="w-full h-12 bg-teal hover:bg-teal/90 text-white font-black uppercase tracking-widest rounded-xl shadow-lg shadow-teal/20 transition-all active:scale-95">
+                            <Button onClick={handleUpdate} disabled={saving} className="w-full">
                                 {saving ? 'Syncing...' : 'Submit Update'}
                             </Button>
                         </div>
                     )}
                 </DialogContent>
             </Dialog>
-        </motion.div>
+        </div>
     );
 }

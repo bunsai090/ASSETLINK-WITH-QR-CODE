@@ -4,9 +4,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import { TrendingUp, Download, BarChart3, PieChart as PieIcon, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import StatsCard from '../../components/StatsCard';
 import { format, subDays } from 'date-fns';
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const COLORS = ['#0d9488', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#10b981'];
@@ -99,90 +97,58 @@ export default function Analytics() {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center py-40 gap-4">
-                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 italic">Synthesizing Institutional Data...</p>
+            <div className="flex items-center justify-center h-64">
+                <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
         );
     }
 
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1
-            }
-        }
-    };
-
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: 'spring', stiffness: 300, damping: 24 }
-        }
-    };
-
     return (
-        <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-12 pb-20 relative z-10 font-sans"
-        >
+        <div className="space-y-6 max-w-6xl mx-auto pb-12 animate-fade-up">
             {/* Header Area */}
-            <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                <div className="space-y-1.5">
-                    <h1 className="text-4xl md:text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1]">
-                        Institutional <span className="text-primary italic">Intelligence</span>
-                    </h1>
-                    <p className="text-muted-foreground text-lg max-w-2xl font-medium tracking-tight opacity-70">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-semibold text-foreground tracking-tight">Institutional Intelligence</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
                         Synthesized operational data and infrastructure performance metrics.
                     </p>
                 </div>
-                <Button variant="outline" className="h-14 px-8 rounded-2xl border-border bg-white hover:bg-slate-50 text-[10px] font-black uppercase tracking-[0.2em] shadow-sm transition-all active:scale-[0.98]">
-                    <Download className="w-4 h-4 mr-3 text-primary" /> Export Intelligence Report
+                <Button variant="outline" className="h-9 gap-2 text-sm bg-white border-border">
+                    <Download className="w-4 h-4" /> Export Report
                 </Button>
-            </motion.div>
+            </div>
 
             {/* Tactical Metrics Hub */}
-            <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: 'Universal Inflow', val: requests.length, icon: BarChart3, color: 'text-primary' },
+                    { label: 'Universal Inflow', val: requests.length, icon: BarChart3, color: 'text-foreground' },
                     { label: 'Settlement Ratio', val: `${requests.length > 0 ? Math.round((requests.filter(r => r.status === 'Completed').length / requests.length) * 100) : 0}%`, icon: TrendingUp, color: 'text-emerald-600' },
                     { label: 'Velocity Index', val: `${avgResolutionTime}d`, icon: Activity, color: 'text-blue-600' },
                     { label: 'Escalation Potential', val: requests.filter(r => r.priority === 'Critical').length, icon: TrendingUp, color: 'text-rose-600' }
                 ].map((kpi, idx) => (
                     <div 
                         key={kpi.label} 
-                        className="bg-white p-6 rounded-[2rem] border border-border shadow-sm flex flex-col gap-4 group hover:shadow-xl transition-all duration-500"
+                        className="bg-card p-5 rounded-xl border border-border shadow-sm flex flex-col gap-3"
                     >
                         <div className="flex items-center justify-between">
-                            <div className={cn("w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-border group-hover:bg-primary group-hover:text-white transition-all duration-500", kpi.color)}>
-                                <kpi.icon className="w-6 h-6" />
+                            <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center">
+                                <kpi.icon className={cn("w-5 h-5", kpi.color)} />
                             </div>
                             <div className="flex flex-col items-end">
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{kpi.label}</span>
-                                <span className={cn("text-3xl font-serif font-black tracking-tighter", kpi.color)}>{kpi.val}</span>
+                                <span className="label-mono text-muted-foreground">{kpi.label}</span>
+                                <span className={cn("text-2xl font-bold tracking-tight mt-1", kpi.color)}>{kpi.val}</span>
                             </div>
                         </div>
                     </div>
                 ))}
-            </motion.div>
+            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Status Allocation */}
-                <motion.div 
-                    variants={itemVariants}
-                    whileInView={{ scale: [0.98, 1], opacity: 1 }}
-                    viewport={{ once: false, amount: 0.2 }}
-                    className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm flex flex-col"
-                >
-                    <div className="mb-8">
-                        <h3 className="text-xl font-serif font-black text-foreground">Status <span className="text-primary italic">Distribution</span></h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Operational Lifecycle Segmenting</p>
+                <div className="bg-card border border-border rounded-xl p-6 shadow-sm flex flex-col">
+                    <div className="mb-6">
+                        <h3 className="text-sm font-semibold text-foreground">Status Distribution</h3>
+                        <p className="label-mono text-muted-foreground mt-0.5">Operational lifecycle segmenting</p>
                     </div>
                     <div className="flex-1 flex items-center justify-center min-h-[300px]">
                         <ResponsiveContainer width="100%" height={300}>
@@ -191,13 +157,11 @@ export default function Analytics() {
                                     data={statusData} 
                                     cx="50%" 
                                     cy="50%" 
-                                    innerRadius={75} 
-                                    outerRadius={95} 
-                                    paddingAngle={4} 
+                                    innerRadius={80} 
+                                    outerRadius={100} 
+                                    paddingAngle={2} 
                                     dataKey="value" 
                                     stroke="none"
-                                    animationBegin={0}
-                                    animationDuration={1500}
                                 >
                                     {statusData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="focus:outline-none" />
@@ -206,36 +170,28 @@ export default function Analytics() {
                                 <Tooltip 
                                     contentStyle={{ 
                                         backgroundColor: 'white', 
-                                        borderRadius: '24px', 
+                                        borderRadius: '8px', 
                                         border: '1px solid #e2e8f0', 
-                                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
-                                        padding: '16px',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        fontFamily: 'Fraunces, serif'
+                                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                        fontSize: '12px'
                                     }} 
                                 />
                                 <Legend 
                                     verticalAlign="bottom" 
                                     align="center" 
                                     iconType="circle"
-                                    wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: '800', letterSpacing: '1px', opacity: 0.6 }}
+                                    wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }}
                                 />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* Priority Distribution */}
-                <motion.div 
-                    variants={itemVariants}
-                    whileInView={{ scale: [0.98, 1], opacity: 1 }}
-                    viewport={{ once: false, amount: 0.2 }}
-                    className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm flex flex-col"
-                >
-                    <div className="mb-8">
-                        <h3 className="text-xl font-serif font-black text-foreground">Critical <span className="text-primary italic">Density</span></h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Registry Priority Stratification</p>
+                <div className="bg-card border border-border rounded-xl p-6 shadow-sm flex flex-col">
+                    <div className="mb-6">
+                        <h3 className="text-sm font-semibold text-foreground">Critical Density</h3>
+                        <p className="label-mono text-muted-foreground mt-0.5">Registry priority stratification</p>
                     </div>
                     <div className="flex-1 flex items-center justify-center min-h-[300px]">
                         <ResponsiveContainer width="100%" height={300}>
@@ -243,141 +199,127 @@ export default function Analytics() {
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis 
                                     dataKey="name" 
-                                    fontSize={10} 
+                                    fontSize={12} 
                                     axisLine={false} 
                                     tickLine={false} 
-                                    tick={{ fill: '#94a3b8', fontWeight: 800 }} 
+                                    tick={{ fill: '#64748b' }} 
                                     dy={10}
                                 />
                                 <YAxis 
                                     axisLine={false} 
                                     tickLine={false} 
-                                    tick={{ fill: '#94a3b8', fontWeight: 800 }} 
+                                    tick={{ fill: '#64748b' }} 
+                                    fontSize={12}
                                 />
                                 <Tooltip 
                                     cursor={{ fill: '#f8fafc' }}
                                     contentStyle={{ 
                                         backgroundColor: 'white', 
-                                        borderRadius: '24px', 
+                                        borderRadius: '8px', 
                                         border: '1px solid #e2e8f0', 
-                                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
-                                        padding: '16px',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        fontFamily: 'Fraunces, serif'
+                                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                        fontSize: '12px'
                                     }} 
                                 />
-                                <Bar dataKey="value" fill="#054a29" radius={[12, 12, 4, 4]} barSize={40} animationDuration={2000} />
+                                <Bar dataKey="value" fill="hsl(172,75%,17%)" radius={[4, 4, 0, 0]} barSize={40} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* Timeline Analysis */}
-                <motion.div 
-                    variants={itemVariants}
-                    whileInView={{ scale: [0.98, 1], opacity: 1 }}
-                    viewport={{ once: false, amount: 0.2 }}
-                    className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm lg:col-span-2"
-                >
-                    <div className="mb-8">
-                        <h3 className="text-xl font-serif font-black text-foreground">Strategic <span className="text-primary italic">Velocity</span></h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">7-Day Distribution Inflow Metrics</p>
+                <div className="bg-card border border-border rounded-xl p-6 shadow-sm lg:col-span-2">
+                    <div className="mb-6">
+                        <h3 className="text-sm font-semibold text-foreground">Strategic Velocity</h3>
+                        <p className="label-mono text-muted-foreground mt-0.5">7-Day distribution inflow metrics</p>
                     </div>
-                    <div className="h-[400px]">
+                    <div className="h-[350px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={last7} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis 
                                     dataKey="date" 
-                                    fontSize={10} 
+                                    fontSize={12} 
                                     axisLine={false} 
                                     tickLine={false} 
-                                    tick={{ fill: '#94a3b8', fontWeight: 800 }} 
+                                    tick={{ fill: '#64748b' }} 
                                     dy={10}
                                 />
                                 <YAxis 
                                     axisLine={false} 
                                     tickLine={false} 
-                                    tick={{ fill: '#94a3b8', fontWeight: 800 }} 
+                                    tick={{ fill: '#64748b' }} 
+                                    fontSize={12}
                                 />
                                 <Tooltip 
                                     contentStyle={{ 
                                         backgroundColor: 'white', 
-                                        borderRadius: '24px', 
+                                        borderRadius: '8px', 
                                         border: '1px solid #e2e8f0', 
-                                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
-                                        padding: '16px',
-                                        fontSize: '12px',
-                                        fontFamily: 'Fraunces, serif'
+                                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                        fontSize: '12px'
                                     }} 
                                 />
                                 <Legend 
                                     verticalAlign="top" 
                                     align="right" 
                                     iconType="circle"
-                                    wrapperStyle={{ paddingBottom: '40px', fontSize: '10px', fontWeight: '800', letterSpacing: '1px' }}
+                                    wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }}
                                 />
-                                <Line type="monotone" dataKey="requests" stroke="#054a29" strokeWidth={4} dot={{ r: 0 }} activeDot={{ r: 8, strokeWidth: 4, stroke: '#fff' }} name="Registry Inflow" animationDuration={2000} />
-                                <Line type="monotone" dataKey="completed" stroke="#94a3b8" strokeWidth={4} strokeDasharray="8 6" dot={{ r: 0 }} activeDot={{ r: 8, strokeWidth: 4, stroke: '#fff' }} name="Resolution Output" animationDuration={2500} />
+                                <Line type="monotone" dataKey="requests" stroke="hsl(172,75%,17%)" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} name="Registry Inflow" />
+                                <Line type="monotone" dataKey="completed" stroke="#94a3b8" strokeWidth={3} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} name="Resolution Output" />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* Categorical Breakdown */}
-                <motion.div 
-                    variants={itemVariants}
-                    whileInView={{ scale: [0.98, 1], opacity: 1 }}
-                    viewport={{ once: false, amount: 0.2 }}
-                    className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm lg:col-span-2"
-                >
-                    <div className="mb-8">
-                        <h3 className="text-xl font-serif font-black text-foreground">Asset <span className="text-primary italic">Allocation</span></h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Registry Volume vs Damage Frequency</p>
+                <div className="bg-card border border-border rounded-xl p-6 shadow-sm lg:col-span-2">
+                    <div className="mb-6">
+                        <h3 className="text-sm font-semibold text-foreground">Asset Allocation</h3>
+                        <p className="label-mono text-muted-foreground mt-0.5">Registry volume vs damage frequency</p>
                     </div>
-                    <div className="h-[400px]">
+                    <div className="h-[350px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={categoryData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis 
                                     dataKey="name" 
-                                    fontSize={10} 
+                                    fontSize={12} 
                                     axisLine={false} 
                                     tickLine={false} 
-                                    tick={{ fill: '#94a3b8', fontWeight: 800 }} 
+                                    tick={{ fill: '#64748b' }} 
                                     dy={10}
                                 />
                                 <YAxis 
                                     axisLine={false} 
                                     tickLine={false} 
-                                    tick={{ fill: '#94a3b8', fontWeight: 800 }} 
+                                    tick={{ fill: '#64748b' }} 
+                                    fontSize={12}
                                 />
                                 <Tooltip 
                                     cursor={{ fill: '#f8fafc' }}
                                     contentStyle={{ 
                                         backgroundColor: 'white', 
-                                        borderRadius: '24px', 
+                                        borderRadius: '8px', 
                                         border: '1px solid #e2e8f0', 
-                                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
-                                        padding: '16px',
-                                        fontSize: '12px',
-                                        fontFamily: 'Fraunces, serif'
+                                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                        fontSize: '12px'
                                     }} 
                                 />
                                 <Legend 
                                     verticalAlign="top" 
                                     align="right" 
                                     iconType="circle"
-                                    wrapperStyle={{ paddingBottom: '40px', fontSize: '10px', fontWeight: '800', letterSpacing: '1px' }}
+                                    wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }}
                                 />
-                                <Bar dataKey="assets" fill="#054a29" radius={[12, 12, 0, 0]} barSize={24} name="Total Inventory" animationDuration={2000} />
-                                <Bar dataKey="damaged" fill="#f59e0b" radius={[12, 12, 0, 0]} barSize={24} name="Damage Registry" animationDuration={2500} />
+                                <Bar dataKey="assets" fill="hsl(172,75%,17%)" radius={[4, 4, 0, 0]} barSize={24} name="Total Inventory" />
+                                <Bar dataKey="damaged" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={24} name="Damage Registry" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                </motion.div>
+                </div>
             </div>
-        </motion.div>
+        </div>
     );
 }

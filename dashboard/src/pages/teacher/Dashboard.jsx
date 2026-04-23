@@ -3,12 +3,11 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import StatsCard from '../../components/StatsCard';
 import StatusBadge from '../../components/StatusBadge';
-import { Package, AlertTriangle, Wrench, Clock, TrendingUp, ArrowRight, Plus } from 'lucide-react';
+import { Package, AlertTriangle, Wrench, Clock, TrendingUp, Plus, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 export default function TeacherDashboard() {
@@ -20,226 +19,179 @@ export default function TeacherDashboard() {
     useEffect(() => {
         if (!currentUser) return;
 
-        // Listen for Real-Time Assets
-        const assetsQuery = query(
-            collection(db, 'assets'),
-            orderBy('created_at', 'desc')
-        );
-
+        const assetsQuery = query(collection(db, 'assets'), orderBy('created_at', 'desc'));
         const unsubscribeAssets = onSnapshot(assetsQuery, (snapshot) => {
-            const assetsList = snapshot.docs.map(doc => {
-                /** @type {any} */
-                const data = doc.data();
-                return { ...data, id: doc.id };
-            });
-            setAssets(assetsList);
+            setAssets(snapshot.docs.map(doc => /** @type {any} */({ ...doc.data(), id: doc.id })));
         });
 
-        // Listen for Real-Time Repair Requests
-        const requestsQuery = query(
-            collection(db, 'repair_requests'),
-            orderBy('created_at', 'desc')
-        );
-
+        const requestsQuery = query(collection(db, 'repair_requests'), orderBy('created_at', 'desc'));
         const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
             const teacherEmail = currentUser.email?.toLowerCase();
             const teacherName = currentUser.full_name?.toLowerCase();
-            
-            const requestsList = snapshot.docs.map(doc => {
-                /** @type {any} */
-                const data = doc.data();
-                return { ...data, id: doc.id };
-            })
-            .filter(r => {
-                const emailMatches = r.reported_by_email?.toLowerCase() === teacherEmail;
-                const nameMatches = r.reported_by_name?.toLowerCase() === teacherName;
-                const schoolMatches = r.school_id === currentUser.school_id;
-                
-                return emailMatches || nameMatches || (r.status === 'Pending Teacher Verification' && schoolMatches);
-            });
-                
-            setRequests(requestsList);
+            const list = snapshot.docs
+                .map(doc => /** @type {any} */({ ...doc.data(), id: doc.id }))
+                .filter(r => {
+                    const emailMatches = r.reported_by_email?.toLowerCase() === teacherEmail;
+                    const nameMatches = r.reported_by_name?.toLowerCase() === teacherName;
+                    const schoolMatches = r.school_id === currentUser.school_id;
+                    return emailMatches || nameMatches || (r.status === 'Pending Teacher Verification' && schoolMatches);
+                });
+            setRequests(list);
             setLoading(false);
         });
 
-        return () => {
-            unsubscribeAssets();
-            unsubscribeRequests();
-        };
+        return () => { unsubscribeAssets(); unsubscribeRequests(); };
     }, [currentUser]);
 
     const recent = requests.slice(0, 5);
+    const pending = requests.filter(r => r.status === 'Pending').length;
+    const inProgress = requests.filter(r => r.status === 'In Progress').length;
+    const critical = requests.filter(r => r.priority === 'Critical').length;
+    const completed = requests.filter(r => r.status === 'Completed').length;
+    const resolutionRate = requests.length > 0 ? Math.round((completed / requests.length) * 100) : 0;
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-vh-50">
-                <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+            <div className="flex items-center justify-center h-64">
+                <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
         );
     }
 
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1,
-                delayChildren: 0.1
-            }
-        }
-    };
-
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: 'spring', stiffness: 300, damping: 24 }
-        }
-    };
-
     return (
-        <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-12 pb-20 relative z-10"
-        >
-            {/* Header Section */}
-            <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                <div className="space-y-1.5">
-                    <h1 className="text-4xl md:text-5xl font-serif font-black text-foreground tracking-tight leading-[1.1]">
-                        Welcome back, <span className="text-primary italic">{currentUser?.full_name?.split(' ')[0] || 'Teacher'}</span>
+        <div className="space-y-6 animate-fade-up">
+            {/* Page Header */}
+            <div className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-xl font-semibold text-foreground tracking-tight">
+                        Good {getGreeting()}, {currentUser?.full_name?.split(' ')[0] || 'Teacher'}
                     </h1>
-                    <p className="text-muted-foreground text-lg max-w-2xl font-medium tracking-tight opacity-70">
-                        Monitoring {assets.length} school assets in your department. Everything is synchronized.
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                        Tracking {assets.length} assets · {pending} pending reviews
                     </p>
                 </div>
-                <Link to="/report-damage" className="shrink-0">
-                    <Button size="lg" className="h-16 px-10 rounded-[1.25rem] bg-primary hover:bg-primary/90 text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 transition-all active:scale-[0.98]">
-                        <Plus className="w-5 h-5 mr-3" /> Report Damage
+                <Link to="/report-damage">
+                    <Button size="sm" className="h-8 px-3 text-xs font-medium bg-primary hover:bg-primary/90 text-white rounded-lg gap-1.5">
+                        <Plus className="w-3.5 h-3.5" />
+                        Report Damage
                     </Button>
                 </Link>
-            </motion.div>
+            </div>
 
-            {/* Premium Stats Grid */}
-            <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatsCard title="Assets" value={assets.length} subtitle="Managed equipment" icon={Package} color="teal" />
-                <StatsCard title="Queued" value={requests.filter(r => r.status === 'Pending').length} subtitle="Awaiting review" icon={Clock} color="amber" />
-                <StatsCard title="In Flight" value={requests.filter(r => r.status === 'In Progress').length} subtitle="Active work orders" icon={Wrench} color="blue" />
-                <StatsCard title="Critical" value={requests.filter(r => r.priority === 'Critical').length} subtitle="Urgent issues" icon={AlertTriangle} color="red" />
-            </motion.div>
+                <StatsCard title="Pending" value={pending} subtitle="Awaiting review" icon={Clock} color="amber" />
+                <StatsCard title="In Progress" value={inProgress} subtitle="Active work orders" icon={Wrench} color="blue" />
+                <StatsCard title="Critical" value={critical} subtitle="High priority" icon={AlertTriangle} color="red" />
+            </div>
 
-            <div className="grid lg:grid-cols-3 gap-8">
-                {/* Recent Requests Card */}
-                <motion.div 
-                    variants={itemVariants}
-                    className="lg:col-span-2 bg-white rounded-[2.5rem] border border-border p-10 shadow-sm"
-                >
-                    <div className="flex items-center justify-between mb-8">
+            {/* Main content grid */}
+            <div className="grid lg:grid-cols-3 gap-4">
+                {/* Recent Requests Table */}
+                <div className="lg:col-span-2 bg-card border border-border rounded-xl overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-border">
                         <div>
-                            <h2 className="text-2xl font-serif font-black text-foreground">Department <span className="text-primary italic">Reports</span></h2>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-1">Latest updates from your resource reports</p>
+                            <h2 className="text-sm font-semibold text-foreground">Department Reports</h2>
+                            <p className="label-mono text-muted-foreground mt-0.5">Latest repair requests</p>
                         </div>
                         <Link to="/repair-requests">
-                            <Button variant="outline" className="h-10 px-6 rounded-full border-border text-[9px] font-black uppercase tracking-widest hover:bg-slate-50">
-                                View History <ArrowRight className="w-4 h-4 ml-2" />
+                            <Button variant="ghost" size="sm" className="h-7 px-2.5 text-xs gap-1 text-muted-foreground hover:text-foreground">
+                                View all <ArrowUpRight className="w-3 h-3" />
                             </Button>
                         </Link>
                     </div>
 
-                    <div className="space-y-1">
-                        {recent.length === 0 ? (
-                            <div className="text-center py-24 rounded-[2rem] bg-slate-50/50 border border-dashed border-border/50 flex flex-col items-center justify-center">
-                                <Package className="w-16 h-16 text-muted-foreground/10 mb-4" />
-                                <h3 className="text-xl font-serif font-black text-foreground italic opacity-40">Clear Queue</h3>
-                                <p className="text-xs text-muted-foreground max-w-[200px] mt-2 font-medium opacity-40">No active repair requests found for your department.</p>
+                    {recent.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                            <Package className="w-8 h-8 text-muted-foreground/20 mb-3" />
+                            <p className="text-sm font-medium text-muted-foreground/60">No active requests</p>
+                            <p className="text-xs text-muted-foreground/40 mt-1">Your department queue is clear.</p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-border">
+                            {/* Table header */}
+                            <div className="grid grid-cols-[1fr_auto_auto] gap-4 px-5 py-2.5 bg-muted/30">
+                                <span className="label-mono">Asset</span>
+                                <span className="label-mono">Priority</span>
+                                <span className="label-mono">Status</span>
                             </div>
-                        ) : (
-                            recent.map((req, idx) => (
-                                <motion.div
-                                    variants={itemVariants}
-                                    key={req.id}
-                                >
-                                    <Link to={`/repair-requests?id=${req.id}`}>
-                                        <div className="group flex items-center gap-6 p-5 rounded-2xl hover:bg-slate-50 transition-all border border-transparent hover:border-border/40">
-                                            <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0 group-hover:bg-white group-hover:shadow-md transition-all">
-                                                <Wrench className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-3 mb-1">
-                                                    <p className="font-black text-foreground text-sm tracking-tight truncate group-hover:text-primary transition-colors">{req.asset_name}</p>
-                                                    <StatusBadge status={req.priority} size="sm" />
-                                                </div>
-                                                <p className="text-[10px] font-bold text-muted-foreground/40 line-clamp-1 italic">{req.description}</p>
-                                            </div>
-                                            <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                                                <StatusBadge status={req.status} size="sm" />
-                                                <span className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-[0.2em] leading-none">
-                                                    {req.created_at?.toDate ? format(req.created_at.toDate(), 'MMM dd') : ''}
-                                                </span>
-                                            </div>
+                            {recent.map((req) => (
+                                <Link key={req.id} to={`/repair-requests?id=${req.id}`}>
+                                    <div className="data-row grid grid-cols-[1fr_auto_auto] gap-4 items-center px-5 py-3.5 hover:bg-muted/30 transition-colors">
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium text-foreground truncate">{req.asset_name}</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5 truncate">{req.description}</p>
                                         </div>
-                                    </Link>
-                                </motion.div>
-                            ))
-                        )}
-                    </div>
-                </motion.div>
-
-                {/* Right Side Column */}
-                <div className="space-y-8">
-                    {/* Progress Overview Card */}
-                    <motion.div variants={itemVariants} className="bg-white rounded-[2.5rem] border border-border p-10 shadow-sm">
-                        <h2 className="text-xl font-serif font-black text-foreground mb-8">Department <span className="text-primary italic">Health</span></h2>
-                        <div className="space-y-8">
-                            {[
-                                { label: 'Pending', count: requests.filter(r => r.status === 'Pending').length, total: requests.length, color: 'bg-amber-500' },
-                                { label: 'Active', count: requests.filter(r => r.status === 'In Progress').length, total: requests.length, color: 'bg-primary' },
-                                { label: 'Resolved', count: requests.filter(r => r.status === 'Completed').length, total: requests.length, color: 'bg-emerald-500' },
-                            ].map(({ label, count, total, color }) => (
-                                <div key={label} className="group">
-                                    <div className="flex justify-between items-end mb-3">
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{label}</span>
-                                        <div className="flex items-baseline gap-1.5">
-                                            <span className="text-lg font-serif font-black text-foreground leading-none">{count}</span>
-                                            <span className="text-[10px] font-bold text-muted-foreground opacity-30">/ {total}</span>
+                                        <StatusBadge status={req.priority} size="sm" />
+                                        <div className="flex flex-col items-end gap-1">
+                                            <StatusBadge status={req.status} size="sm" />
+                                            <span className="label-mono text-muted-foreground/50">
+                                                {req.created_at?.toDate ? format(req.created_at.toDate(), 'MMM d') : ''}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="h-1.5 bg-slate-50 rounded-full overflow-hidden">
-                                        <motion.div
-                                            initial={{ width: 0 }}
-                                            whileInView={{ width: total > 0 ? `${(count / total) * 100}%` : '0%' }}
-                                            viewport={{ once: false }}
-                                            transition={{ duration: 1.5, ease: "circOut" }}
-                                            className={cn("h-full rounded-full", color)}
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Right column */}
+                <div className="space-y-4">
+                    {/* Status Breakdown */}
+                    <div className="bg-card border border-border rounded-xl p-5">
+                        <h2 className="text-sm font-semibold text-foreground mb-4">Request Status</h2>
+                        <div className="space-y-3">
+                            {[
+                                { label: 'Pending', count: pending, total: requests.length, color: 'bg-amber-500' },
+                                { label: 'In Progress', count: inProgress, total: requests.length, color: 'bg-sky-500' },
+                                { label: 'Completed', count: completed, total: requests.length, color: 'bg-emerald-500' },
+                            ].map(({ label, count, total, color }) => (
+                                <div key={label}>
+                                    <div className="flex justify-between mb-1.5">
+                                        <span className="label-mono text-muted-foreground">{label}</span>
+                                        <span className="label-mono text-foreground">{count} / {total}</span>
+                                    </div>
+                                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                        <div
+                                            className={cn('h-full rounded-full transition-all duration-700', color)}
+                                            style={{ width: total > 0 ? `${(count / total) * 100}%` : '0%' }}
                                         />
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    </motion.div>
+                    </div>
 
-                    {/* Resolution Rate (The "Vibe" Card) */}
-                    <motion.div 
-                        variants={itemVariants}
-                        className="relative overflow-hidden bg-[#054a29] rounded-[2.5rem] p-10 text-white shadow-2xl shadow-primary/20 group"
-                    >
-                        <TrendingUp className="w-10 h-10 mb-8 text-primary shadow-2xl" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 italic">Resolution Success</span>
-                        <div className="flex items-baseline gap-2 mt-2">
-                            <span className="text-7xl font-serif font-black tracking-tighter italic leading-none">
-                                {requests.length > 0 ? Math.round((requests.filter(r => r.status === 'Completed').length / requests.length) * 100) : 0}%
-                            </span>
+                    {/* Resolution Rate */}
+                    <div className="bg-[hsl(222,47%,9%)] border border-[hsl(222,35%,16%)] rounded-xl p-5 text-white">
+                        <div className="flex items-center gap-2 mb-3">
+                            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="label-mono text-white/40">Resolution Rate</span>
                         </div>
-                        <div className="mt-10 p-6 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm">
-                            <p className="text-[11px] font-medium text-white/50 leading-relaxed italic">
-                                Maintenance synchronization is <span className="text-primary not-italic font-black uppercase tracking-widest">Stable</span>. Critical assets are being restored efficiently.
-                            </p>
+                        <div className="text-5xl font-bold text-white tracking-tight leading-none mb-1">
+                            {resolutionRate}<span className="text-2xl text-white/40">%</span>
                         </div>
-                    </motion.div>
+                        <p className="text-xs text-white/40 mt-3">
+                            {completed} of {requests.length} requests resolved
+                        </p>
+                        <div className="mt-3 h-1 bg-white/10 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                                style={{ width: `${resolutionRate}%` }}
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
+}
+
+function getGreeting() {
+    const h = new Date().getHours();
+    if (h < 12) return 'morning';
+    if (h < 18) return 'afternoon';
+    return 'evening';
 }
