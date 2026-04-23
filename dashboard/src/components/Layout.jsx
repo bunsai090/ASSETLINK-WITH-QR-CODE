@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import {
-    Menu, X, LogOut, ChevronRight, QrCode, CalendarDays,
-    School, ShieldAlert, Eye, LayoutDashboard, Package, AlertTriangle, Wrench, BarChart3
+    Menu, X, LogOut, LayoutDashboard, Package, AlertTriangle,
+    Wrench, BarChart3, CalendarDays, School, Eye, ChevronRight, Bell
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sileo } from 'sileo';
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 
 const navItems = [
-    { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'teacher', 'principal', 'maintenance'] },
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'teacher', 'principal', 'maintenance', 'supervisor'] },
     { path: '/assets', label: 'Assets', icon: Package, roles: ['admin', 'teacher', 'principal'] },
     { path: '/repair-requests', label: 'Repair Requests', icon: AlertTriangle, roles: ['admin', 'teacher', 'principal'] },
     { path: '/report-damage', label: 'Report Damage', icon: AlertTriangle, roles: ['admin', 'teacher'] },
@@ -22,6 +22,12 @@ const navItems = [
     { path: '/calendar', label: 'Calendar', icon: CalendarDays, roles: ['admin', 'maintenance', 'principal'] },
     { path: '/schools', label: 'Schools', icon: School, roles: ['admin', 'supervisor'] },
     { path: '/oversight', label: 'Oversight', icon: Eye, roles: ['supervisor'] },
+];
+
+const navGroups = [
+    { label: 'Main', paths: ['/', '/assets', '/repair-requests', '/report-damage'] },
+    { label: 'Operations', paths: ['/tasks', '/calendar'] },
+    { label: 'Intelligence', paths: ['/analytics', '/schools', '/oversight'] },
 ];
 
 export default function Layout() {
@@ -37,158 +43,150 @@ export default function Layout() {
         setLogoutModalOpen(false);
         logout();
         sileo.success({
-            title: 'Logged Out Successfully',
-            description: 'You have been safely logged out. See you again soon!'
+            title: 'Logged out',
+            description: 'You have been safely logged out.'
         });
     };
+
+    const pageTitle = location.pathname === '/'
+        ? 'Overview'
+        : location.pathname.slice(1).split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
 
     return (
         <div className="h-screen bg-background flex overflow-hidden">
             {/* Mobile overlay */}
             <AnimatePresence>
                 {sidebarOpen && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" 
-                        onClick={() => setSidebarOpen(false)} 
+                        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden"
+                        onClick={() => setSidebarOpen(false)}
                     />
                 )}
             </AnimatePresence>
 
             {/* Sidebar */}
             <aside className={cn(
-                "fixed top-0 left-0 h-screen w-72 bg-sidebar text-sidebar-foreground z-50 transform transition-transform duration-500 ease-[0.22, 1, 0.36, 1] lg:translate-x-0 lg:relative lg:z-auto lg:flex-shrink-0 border-r border-sidebar-border",
-                sidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+                "fixed top-0 left-0 h-screen w-[220px] bg-sidebar z-50 transform transition-transform duration-300 lg:translate-x-0 lg:relative lg:z-auto lg:flex-shrink-0 flex flex-col border-r border-sidebar-border",
+                sidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}>
-                <div className="flex flex-col h-full relative overflow-hidden">
-                    {/* Logo Section */}
-                    <div className="flex items-center gap-3 px-8 h-24 flex-shrink-0 relative z-10">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-[0.8rem] bg-[#054a29] shadow-lg shadow-[#054a29]/20 transform -rotate-3 transition-transform hover:rotate-0 overflow-hidden border border-white/10">
-                            <img src="/logo.png" alt="AssetLink Logo" className="w-full h-full object-cover scale-110 shadow-inner" />
-                        </div>
-                        <div className="flex flex-col items-start leading-none gap-1">
-                            <span className="text-xl font-serif font-black tracking-tight text-white italic">Asset<span className="text-primary-foreground/80 not-italic font-sans font-bold tracking-tighter ml-0.5">Link</span></span>
-                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30 whitespace-nowrap">
-                                Resource Management
-                            </span>
-                        </div>
-                        <button onClick={() => setSidebarOpen(false)} className="ml-auto lg:hidden text-white/40 hover:text-white">
-                            <X className="w-5 h-5" />
-                        </button>
+                {/* Brand */}
+                <div className="flex items-center gap-2.5 px-5 h-[56px] flex-shrink-0 border-b border-sidebar-border">
+                    <div className="w-7 h-7 rounded-md bg-[hsl(var(--sidebar-primary))] flex items-center justify-center shadow-sm overflow-hidden">
+                        <img src="/logo.png" alt="AssetLink" className="w-full h-full object-cover" />
                     </div>
+                    <span className="font-semibold text-sm text-white tracking-tight">AssetLink</span>
+                    <button
+                        onClick={() => setSidebarOpen(false)}
+                        className="ml-auto lg:hidden text-sidebar-foreground/50 hover:text-white p-1"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
 
-                    {/* Navigation */}
-                    <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1 relative z-10 custom-scrollbar">
-                        <div className="px-5 mb-4">
-                            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/20">Operational Hub</p>
-                        </div>
-                        {visibleItems.map(({ path, label, icon: Icon }) => {
-                            const active = location.pathname === path;
-                            return (
-                                <Link
-                                    key={path}
-                                    to={path}
-                                    onClick={() => setSidebarOpen(false)}
-                                    className={cn(
-                                        "flex items-center gap-3 px-5 py-3.5 rounded-xl text-[13px] font-bold transition-all duration-300 group relative",
-                                        active
-                                            ? "bg-primary text-white shadow-lg shadow-black/20"
-                                            : "text-white/50 hover:text-white hover:bg-white/5"
-                                    )}
-                                >
-                                    <Icon className={cn("w-4 h-4 flex-shrink-0 transition-all", active ? "scale-110" : "group-hover:scale-110")} />
-                                    <span className="tracking-tight">{label}</span>
-                                    {active && (
-                                        <motion.div 
-                                            layoutId="sidebar-active-indicator"
-                                            className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_white]" 
-                                        />
-                                    )}
-                                </Link>
-                            );
-                        })}
-                    </nav>
-
-                    {/* User Profile Footer */}
-                    <div className="mt-auto p-4 relative z-10 border-t border-white/5">
-                        <div className="rounded-2xl p-4 transition-colors hover:bg-white/5">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 border border-white/10">
-                                    <span className="text-xs font-black text-white uppercase italic">
-                                        {currentUser?.full_name?.[0] || currentUser?.email?.[0] || 'U'}
-                                    </span>
+                {/* Navigation */}
+                <nav className="flex-1 overflow-y-auto px-3 py-4 custom-scrollbar">
+                    {navGroups.map(group => {
+                        const groupItems = visibleItems.filter(i => group.paths.includes(i.path));
+                        if (groupItems.length === 0) return null;
+                        return (
+                            <div key={group.label} className="mb-5">
+                                <p className="label-mono text-sidebar-foreground/30 px-3 mb-1.5">{group.label}</p>
+                                <div className="space-y-0.5">
+                                    {groupItems.map(({ path, label, icon: Icon }) => {
+                                        const active = location.pathname === path;
+                                        return (
+                                            <Link
+                                                key={path}
+                                                to={path}
+                                                onClick={() => setSidebarOpen(false)}
+                                                className={cn('nav-item', active && 'active')}
+                                            >
+                                                <Icon className="w-[15px] h-[15px] flex-shrink-0" />
+                                                <span>{label}</span>
+                                                {active && (
+                                                    <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-40" />
+                                                )}
+                                            </Link>
+                                        );
+                                    })}
                                 </div>
-                                <div className="flex flex-col min-w-0">
-                                    <p className="text-sm font-bold text-white leading-tight truncate">
-                                        {currentUser?.full_name || 'System User'}
-                                    </p>
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-primary-foreground/50 mt-1">
-                                        {role} Persona
-                                    </span>
-                                </div>
-                                <button
-                                    onClick={() => setLogoutModalOpen(true)}
-                                    className="ml-auto text-white/20 hover:text-rose-400 transition-colors p-2"
-                                    title="Sign out"
-                                >
-                                    <LogOut className="w-4 h-4 transition-transform hover:-translate-x-1" />
-                                </button>
                             </div>
+                        );
+                    })}
+                </nav>
+
+                {/* User */}
+                <div className="p-3 border-t border-sidebar-border flex-shrink-0">
+                    <div className="flex items-center gap-2.5 p-2 rounded-md hover:bg-sidebar-accent transition-colors group">
+                        <div className="w-7 h-7 rounded-full bg-sidebar-accent flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-white border border-white/10">
+                            {(currentUser?.full_name?.[0] || currentUser?.email?.[0] || 'U').toUpperCase()}
                         </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-sidebar-accent-foreground truncate leading-tight">
+                                {currentUser?.full_name || 'System User'}
+                            </p>
+                            <p className="label-mono text-sidebar-foreground/40 leading-none mt-0.5">
+                                {role}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setLogoutModalOpen(true)}
+                            title="Sign out"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-sidebar-foreground/40 hover:text-rose-400 p-1"
+                        >
+                            <LogOut className="w-3.5 h-3.5" />
+                        </button>
                     </div>
                 </div>
             </aside>
 
-            {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0 relative">
-                {/* Background Grid Overlay */}
-                <div className="al-grid-bg absolute inset-0 pointer-events-none opacity-[0.05]" aria-hidden="true" />
-                
-                {/* Top Header */}
-                <header className="h-20 bg-background/95 backdrop-blur-md border-b border-border flex items-center px-4 lg:px-10 gap-4 sticky top-0 z-30 transition-all">
-                    <button 
-                        onClick={() => setSidebarOpen(true)} 
-                        className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-border text-foreground/60 hover:text-foreground shadow-sm"
+            {/* Main Area */}
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                {/* Top Bar */}
+                <header className="h-[56px] bg-background border-b border-border flex items-center px-4 lg:px-6 gap-3 flex-shrink-0 z-30">
+                    <button
+                        onClick={() => setSidebarOpen(true)}
+                        className="lg:hidden w-8 h-8 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground"
                     >
-                        <Menu className="w-5 h-5" />
+                        <Menu className="w-4 h-4" />
                     </button>
-                    
-                    <div className="flex items-center gap-2">
-                        <div className="h-4 w-1 bg-primary/20 rounded-full hidden sm:block" />
-                        <h2 className="text-xs font-black text-primary/40 uppercase tracking-[0.2em]">
-                            {location.pathname === '/' ? 'Overview' : location.pathname.split('/')[1].replace('-', ' ')}
-                        </h2>
+
+                    {/* Breadcrumb */}
+                    <div className="flex items-center gap-1.5 text-[13px]">
+                        <span className="text-muted-foreground font-medium">AssetLink</span>
+                        <span className="text-border">/</span>
+                        <span className="text-foreground font-semibold">{pageTitle}</span>
                     </div>
 
                     <div className="flex-1" />
-                    
-                    <div className="flex items-center gap-3">
-                        <div className="hidden sm:flex items-center gap-2.5 px-4 py-2 rounded-full bg-background border border-border shadow-sm group">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+
+                    {/* Right Controls */}
+                    <div className="flex items-center gap-2">
+                        {/* Live Status */}
+                        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-50 border border-emerald-200/60 text-emerald-700">
+                            <span className="relative flex h-1.5 w-1.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
                             </span>
-                            <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest">
-                                Operational Status
-                            </span>
+                            <span className="label-mono text-emerald-700 text-[10px]">Operational</span>
                         </div>
-                        <div className="h-10 w-px bg-border mx-1 hidden sm:block" />
                         <ThemeToggle />
                     </div>
                 </header>
 
-                {/* Content Container */}
-                <main className="flex-1 relative z-10 overflow-y-auto">
-                    <div className="p-6 lg:p-10 max-w-7xl mx-auto min-h-full">
+                {/* Page Content */}
+                <main className="flex-1 overflow-y-auto">
+                    <div className="p-6 lg:p-8 max-w-7xl mx-auto">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={location.pathname}
-                                initial={{ opacity: 0, y: 10 }}
+                                initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                             >
                                 <Outlet />
                             </motion.div>
@@ -197,26 +195,29 @@ export default function Layout() {
                 </main>
             </div>
 
-            {/* Logout Confirmation Modal */}
+            {/* Logout Modal */}
             <Dialog open={logoutModalOpen} onOpenChange={setLogoutModalOpen}>
-                <DialogContent className="sm:max-w-md rounded-2xl border-none p-8">
+                <DialogContent className="sm:max-w-sm rounded-xl border border-border p-6">
                     <DialogHeader>
-                        <DialogTitle className="text-2xl font-bold tracking-tight text-center">Sign out</DialogTitle>
+                        <DialogTitle className="text-base font-semibold text-foreground">Sign out</DialogTitle>
                     </DialogHeader>
-                    <div className="py-6 text-center">
-                        <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <LogOut className="w-8 h-8 text-red-600 dark:text-red-400" />
-                        </div>
-                        <p className="text-muted-foreground">
-                            Are you sure you want to log out? <br /> You will need your credentials to access the platform again.
-                        </p>
-                    </div>
-                    <div className="flex gap-3">
-                        <Button variant="outline" onClick={() => setLogoutModalOpen(false)} className="flex-1 font-bold h-12 rounded-xl border-border">
-                            Stay active
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Are you sure you want to sign out? You'll need to log in again to access the platform.
+                    </p>
+                    <div className="flex gap-2 mt-4">
+                        <Button
+                            variant="outline"
+                            onClick={() => setLogoutModalOpen(false)}
+                            className="flex-1 h-9 text-sm font-medium rounded-lg"
+                        >
+                            Cancel
                         </Button>
-                        <Button onClick={handleLogout} variant="destructive" className="flex-1 font-bold h-12 rounded-xl bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200 dark:shadow-none">
-                            Yes, Logout
+                        <Button
+                            onClick={handleLogout}
+                            variant="destructive"
+                            className="flex-1 h-9 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-700"
+                        >
+                            Sign out
                         </Button>
                     </div>
                 </DialogContent>
