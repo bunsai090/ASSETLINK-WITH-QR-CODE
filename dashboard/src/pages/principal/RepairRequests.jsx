@@ -195,285 +195,219 @@ export default function PrincipalRepairRequests() {
     };
 
     return (
-        <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-8 pb-10"
-        >
-            <motion.div variants={itemVariants} className="px-1 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-6 max-w-6xl mx-auto pb-12">
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary italic">Administrative Oversight</span>
-                    </div>
-                    <h1 className="text-4xl font-serif font-black text-foreground tracking-tighter leading-none">Repair <span className="text-primary italic">Approvals</span></h1>
-                    <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest mt-2 opacity-60">Authentication tier: Institutional Command</p>
+                    <h1 className="text-2xl font-semibold text-foreground tracking-tight">Repair Approvals</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Administrative oversight of institutional repairs.
+                    </p>
                 </div>
+            </div>
 
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="relative group w-full sm:w-64">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                        <Input 
-                            placeholder="Filter registry..." 
-                            className="h-12 pl-11 bg-white border-border rounded-xl shadow-sm focus:ring-primary/20"
-                            value={search} 
-                            onChange={e => setSearch(e.target.value)} 
-                        />
-                    </div>
-                    <Select value={filterStatus} onValueChange={setFilterStatus}>
-                        <SelectTrigger className="h-12 w-full sm:w-48 bg-white border-border rounded-xl shadow-sm">
-                            <SelectValue placeholder="Status Filter" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl border-border">
-                            <SelectItem value="all">Comprehensive View</SelectItem>
-                            {STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+            {/* Tactical Status Toggles */}
+            <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Filter registry..." 
+                        className="pl-9 h-9 bg-white border-border text-sm w-full focus-visible:ring-1 focus-visible:ring-primary/50" 
+                        value={search} 
+                        onChange={e => setSearch(e.target.value)} 
+                    />
                 </div>
-            </motion.div>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-full sm:w-[180px] h-9 bg-white text-sm">
+                        <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        {STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
 
-            {loading ? (
-                <div className="flex justify-center py-32">
-                    <div className="w-12 h-12 border-8 border-primary/10 border-t-primary rounded-full animate-spin" />
-                </div>
-            ) : (
-                <motion.div 
-                    variants={containerVariants}
-                    className="grid grid-cols-1 gap-4"
-                >
-                    <AnimatePresence mode="popLayout">
-                        {filtered.length === 0 ? (
-                            <motion.div 
-                                key="empty"
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="text-center py-32 text-muted-foreground bg-white rounded-[2.5rem] border border-dashed border-border/60 shadow-inner"
-                            >
-                                <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6 border border-border/50">
-                                    <ShieldCheck className="w-10 h-10 text-muted-foreground/10" />
+            {/* Table layout */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+                {loading ? (
+                    <div className="p-12 flex justify-center">
+                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="p-12 text-center text-sm text-muted-foreground">
+                        No pending maneuvers detected.
+                    </div>
+                ) : (
+                    <div className="divide-y divide-border">
+                        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 bg-muted/30">
+                            <span className="label-mono">Asset Request</span>
+                            <span className="label-mono hidden sm:block">Priority</span>
+                            <span className="label-mono">Status</span>
+                            <span className="label-mono hidden sm:block">Date</span>
+                        </div>
+                        {filtered.map(req => (
+                            <div key={req.id} onClick={() => { 
+                                setSelected(req); 
+                                setNotes(''); 
+                                setEscalationReason('');
+                                setEscalationAttempted(false);
+                                setAssignedTo(req.assigned_to_name || ''); 
+                            }} className="data-row grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-5 py-3 hover:bg-muted/30 transition-colors cursor-pointer">
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-sm font-medium text-foreground truncate">{req.asset_name}</p>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground truncate">{req.description}</p>
                                 </div>
-                                <h3 className="text-xl font-serif font-black text-foreground tracking-tight italic">Registry Clear</h3>
-                                <p className="text-xs font-medium opacity-50 uppercase tracking-widest mt-1">No pending maneuvers detected</p>
-                            </motion.div>
-                        ) : (
-                            filtered.map(req => (
-                                <motion.div
-                                    key={req.id}
-                                    layout
-                                    variants={itemVariants}
-                                    onClick={() => { 
-                                        setSelected(req); 
-                                        setNotes(''); 
-                                        setEscalationReason('');
-                                        setEscalationAttempted(false);
-                                        setAssignedTo(req.assigned_to_name || ''); 
-                                    }}
-                                    className="bg-white rounded-[2rem] border border-border p-6 hover:shadow-2xl hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden"
-                                >
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50/50 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-primary/5 transition-all duration-500" />
-                                    
-                                    <div className="flex items-start gap-6 relative z-10">
-                                        <div className={`w-1.5 self-stretch rounded-full flex-shrink-0 ${req.priority === 'Critical' ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : req.priority === 'High' ? 'bg-orange-400' : 'bg-primary shadow-[0_0_15px_rgba(20,184,166,0.2)]'}`} />
-                                        
-                                        <div className="flex-1 min-w-0 py-1">
-                                            <div className="flex flex-wrap items-center gap-3 mb-2">
-                                                <h3 className="text-lg font-serif font-black text-foreground tracking-tight leading-none group-hover:text-primary transition-colors">{req.asset_name}</h3>
-                                                <div className="flex gap-2">
-                                                    <StatusBadge status={req.priority} />
-                                                    <StatusBadge status={req.status} />
-                                                </div>
-                                            </div>
-                                            
-                                            <p className="text-sm text-foreground/70 font-medium line-clamp-1 italic tracking-tight mb-4">"{req.description}"</p>
-                                            
-                                            <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-slate-50">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-border/50">
-                                                        <School className="w-4 h-4 text-muted-foreground/60" />
-                                                    </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{req.school_name || 'Protocol Hub'}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-border/50">
-                                                        <UserCircle className="w-4 h-4 text-muted-foreground/60" />
-                                                    </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Reported: {req.reported_by_name}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-border/50">
-                                                        <Clock className="w-4 h-4 text-muted-foreground/60" />
-                                                    </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{req.created_at?.toDate ? format(req.created_at.toDate(), 'MMM d, yyyy') : 'Recently'}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-50 border border-border group-hover:bg-primary group-hover:border-primary transition-all self-center">
-                                            <ChevronRight className="w-6 h-6 text-muted-foreground/30 group-hover:text-white transition-all group-hover:translate-x-0.5" />
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ))
-                        )}
-                    </AnimatePresence>
-                </motion.div>
-            )}
-
-            <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-                <DialogContent className="sm:max-w-2xl rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white">
-                    {selected && (
-                        <div className="flex flex-col max-h-[90vh]">
-                            {/* Dialog Hero */}
-                            <div className="p-8 pt-10 bg-slate-50/50 border-b border-border relative">
-                                <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full -mr-24 -mt-24 blur-3xl opacity-50" />
-                                <div className="flex justify-between items-start relative z-10">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <StatusBadge status={selected.status} />
-                                            <StatusBadge status={selected.priority} />
-                                        </div>
-                                        <h2 className="text-3xl font-serif font-black text-foreground tracking-tighter leading-none mt-2">{selected.asset_name}</h2>
-                                        <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em]">Registry Identifier #{selected.asset_code || '---'}</p>
-                                    </div>
-                                    <div className="w-20 h-20 rounded-[1.5rem] bg-white shadow-xl shadow-black/5 flex items-center justify-center border border-border">
-                                        <Activity className="w-10 h-10 text-primary/40" />
-                                    </div>
+                                <div className="hidden sm:flex items-center">
+                                    <StatusBadge status={req.priority || 'Medium'} size="sm" />
+                                </div>
+                                <div className="flex items-center">
+                                    <StatusBadge status={req.status} size="sm" />
+                                </div>
+                                <div className="hidden sm:flex items-center">
+                                    <span className="text-xs text-muted-foreground">
+                                        {req.created_at?.toDate ? format(req.created_at.toDate(), 'MMM d, yyyy') : ''}
+                                    </span>
                                 </div>
                             </div>
+                        ))}
+                    </div>
+                )}
+            </div>
 
-                            <div className="p-8 overflow-y-auto flex-1 space-y-8 custom-scrollbar">
-                                <div className="grid grid-cols-2 gap-8">
-                                    <div className="space-y-4">
-                                        <div className="space-y-1">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Reporting Node</span>
-                                            <p className="text-sm font-bold text-foreground italic flex items-center gap-2">
-                                                <UserCircle className="w-3.5 h-3.5 text-primary/60" /> {selected.reported_by_name}
-                                            </p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Host Institution</span>
-                                            <p className="text-sm font-bold text-foreground italic flex items-center gap-2">
-                                                <School className="w-3.5 h-3.5 text-primary/60" /> {selected.school_name || 'Central Hub'}
-                                            </p>
-                                        </div>
+            <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+                <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-card border border-border shadow-lg rounded-xl">
+                    {selected && (
+                        <div className="flex flex-col max-h-[80vh]">
+                            <div className="p-6 border-b border-border bg-muted/20">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex gap-2">
+                                        <StatusBadge status={selected.status} size="sm" />
+                                        <StatusBadge status={selected.priority} size="sm" />
                                     </div>
-                                    <div className="space-y-4">
-                                        <div className="space-y-1 text-right">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Submission Timestamp</span>
-                                            <p className="text-sm font-bold text-foreground italic">
-                                                {selected.created_at?.toDate ? format(selected.created_at.toDate(), 'MMMM d, yyyy') : 'Recently'}
+                                    <span className="text-xs font-mono text-muted-foreground">#{selected.asset_code || '---'}</span>
+                                </div>
+                                <h2 className="text-xl font-semibold tracking-tight text-foreground">{selected.asset_name}</h2>
+                            </div>
+
+                            <div className="p-6 space-y-6 overflow-y-auto">
+                                <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg border border-border">
+                                    <div>
+                                        <Label className="text-xs text-muted-foreground">Reported By</Label>
+                                        <p className="text-sm font-medium text-foreground">{selected.reported_by_name}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs text-muted-foreground">School</Label>
+                                        <p className="text-sm font-medium text-foreground">{selected.school_name || 'Central Hub'}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs text-muted-foreground">Date</Label>
+                                        <p className="text-sm font-medium text-foreground">
+                                            {selected.created_at?.toDate ? format(selected.created_at.toDate(), 'MMM d, yyyy') : 'Recently'}
+                                        </p>
+                                    </div>
+                                    {selected.sla_deadline && (
+                                        <div>
+                                            <Label className="text-xs text-red-500">Deadline</Label>
+                                            <p className="text-sm font-medium text-red-500">
+                                                {format(new Date(selected.sla_deadline), 'MMM d, yyyy')}
                                             </p>
                                         </div>
-                                        {selected.sla_deadline && (
-                                            <div className="space-y-1 text-right">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 text-red-400">Resolution Deadline</span>
-                                                <p className="text-sm font-bold text-red-500 italic">
-                                                    {format(new Date(selected.sla_deadline), 'MMMM d, yyyy')}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
+                                    )}
                                 </div>
 
-                                <div className="space-y-3">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Incident Intelligence</span>
-                                    <div className="bg-slate-50 p-6 rounded-[1.5rem] border border-border/50 shadow-inner">
-                                        <p className="text-sm font-medium text-foreground leading-relaxed italic tracking-tight">"{selected.description}"</p>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-medium text-foreground">Incident Description</Label>
+                                    <div className="bg-white p-4 rounded-lg border border-border text-sm">
+                                        {selected.description}
                                     </div>
                                 </div>
 
                                 {selected.photo_url && (
-                                    <div className="rounded-[2rem] overflow-hidden border border-border shadow-xl hover:shadow-2xl transition-all duration-500 group">
-                                        <img 
-                                            src={selected.photo_url} 
-                                            alt="Incident Visual Intelligence" 
-                                            className="w-full h-auto object-cover max-h-[300px] group-hover:scale-105 transition-transform duration-700" 
-                                        />
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-medium text-foreground">Evidence Photo</Label>
+                                        <div className="rounded-lg overflow-hidden border border-border">
+                                            <img src={selected.photo_url} alt="Damage evidence" className="w-full h-auto object-cover max-h-64" />
+                                        </div>
                                     </div>
                                 )}
                                 
                                 {['Pending', 'Approved'].includes(selected.status) && (
-                                    <div className="space-y-8 pt-8 border-t border-border">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="space-y-3">
-                                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground">Personnel Assignment</Label>
+                                    <div className="space-y-4 pt-4 border-t border-border">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs font-medium text-foreground">Assign Staff</Label>
                                                 <Select value={assignedTo} onValueChange={setAssignedTo}>
-                                                    <SelectTrigger className="h-14 rounded-2xl bg-white border-border shadow-sm">
-                                                        <SelectValue placeholder="Command selection..." />
+                                                    <SelectTrigger className="h-9 bg-white text-sm">
+                                                        <SelectValue placeholder="Select maintenance..." />
                                                     </SelectTrigger>
-                                                    <SelectContent className="rounded-2xl border-border">
+                                                    <SelectContent>
                                                         {maintenanceStaff.map(staff => (
                                                             <SelectItem key={staff.email} value={staff.full_name}>
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-bold text-sm tracking-tight">{staff.full_name}</span>
-                                                                    <span className="text-[9px] text-primary/60 uppercase font-black tracking-widest">{staff.specialization || 'Strategic Operative'}</span>
-                                                                </div>
+                                                                {staff.full_name} ({staff.specialization || 'General'})
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
 
-                                            <div className="space-y-3">
-                                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground">Operations Log</Label>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs font-medium text-foreground">Principal Notes</Label>
                                                 <Textarea 
                                                     value={notes} 
                                                     onChange={e => setNotes(e.target.value)} 
-                                                    placeholder="Operational directives..." 
-                                                    className="rounded-2xl bg-white border-border min-h-[56px] py-4" 
+                                                    placeholder="Optional directives..." 
+                                                    className="min-h-[36px] h-9 bg-white text-sm py-2" 
                                                 />
                                             </div>
                                         </div>
 
-                                        <div className="flex gap-4">
-                                            <Button 
-                                                onClick={handleApprove} 
-                                                disabled={saving} 
-                                                className="flex-1 h-14 bg-primary hover:bg-primary/90 text-white font-black uppercase text-[11px] tracking-[0.3em] rounded-2xl shadow-xl shadow-primary/20 gap-3"
-                                            >
-                                                <Check className="w-5 h-5" /> Initialize Unit
-                                            </Button>
+                                        <div className="flex gap-2">
                                             <Button 
                                                 onClick={handleReject} 
                                                 variant="outline" 
                                                 disabled={saving} 
-                                                className="flex-1 h-14 text-red-500 border-red-100 hover:bg-red-50 font-black uppercase text-[11px] tracking-[0.3em] rounded-2xl"
+                                                className="flex-1 h-9 text-sm text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 border-rose-200"
                                             >
-                                                Decline Sequence
+                                                Reject
+                                            </Button>
+                                            <Button 
+                                                onClick={handleApprove} 
+                                                disabled={saving} 
+                                                className="flex-1 h-9 text-sm bg-[hsl(172,75%,17%)] hover:bg-[hsl(172,75%,22%)] text-white"
+                                            >
+                                                {saving ? 'Processing...' : 'Approve Repair'}
                                             </Button>
                                         </div>
 
-                                        <div className="pt-6 space-y-4 bg-amber-50/30 p-6 rounded-[2.5rem] border border-amber-100">
-                                            <div className="space-y-3">
-                                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-700 italic">Strategic Escalation</Label>
-                                                <Textarea 
+                                        <div className="pt-4 space-y-2 border-t border-border">
+                                            <Label className="text-xs font-medium text-amber-600">Escalate Issue</Label>
+                                            <div className="flex gap-2">
+                                                <Input 
                                                     value={escalationReason} 
                                                     onChange={e => { setEscalationReason(e.target.value); setEscalationAttempted(false); }} 
-                                                    placeholder="Specify critical deviation reason..." 
-                                                    className={`rounded-2xl bg-white transition-all shadow-sm ${
-                                                        escalationAttempted && !escalationReason.trim()
-                                                            ? 'border-red-400 ring-2 ring-red-300/20'
-                                                            : 'border-border'
-                                                    }`}
+                                                    placeholder="Reason for escalation..." 
+                                                    className={`h-9 text-sm flex-1 ${escalationAttempted && !escalationReason.trim() ? 'border-red-400' : ''}`}
                                                 />
+                                                <Button 
+                                                    onClick={handleEscalate} 
+                                                    variant="outline" 
+                                                    disabled={saving} 
+                                                    className="h-9 text-sm text-amber-600 border-amber-200 hover:bg-amber-50"
+                                                >
+                                                    Escalate
+                                                </Button>
                                             </div>
-                                            <Button 
-                                                onClick={handleEscalate} 
-                                                variant="outline" 
-                                                disabled={saving} 
-                                                className="w-full h-14 text-purple-600 border-purple-100 bg-white hover:bg-purple-50 font-black uppercase text-[10px] tracking-[0.4em] rounded-2xl gap-3 shadow-md"
-                                            >
-                                                <ArrowUpCircle className="w-5 h-5" /> Escalate to Oversight
-                                            </Button>
                                         </div>
                                     </div>
                                 )}
 
                                 {selected.status === 'In Progress' && (
-                                    <div className="p-8 bg-primary/5 border border-primary/10 rounded-[2.5rem] text-center">
-                                        <p className="text-sm font-black text-primary uppercase tracking-[0.2em] italic flex items-center justify-center gap-3">
-                                            <Activity className="w-4 h-4" /> Operations Active: Unit in designated custody
+                                    <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg text-center">
+                                        <p className="text-sm font-medium text-primary flex items-center justify-center gap-2">
+                                            <CheckCircle className="w-4 h-4" /> Repair is currently assigned and in progress
                                         </p>
                                     </div>
                                 )}
@@ -482,6 +416,6 @@ export default function PrincipalRepairRequests() {
                     )}
                 </DialogContent>
             </Dialog>
-        </motion.div>
+        </div>
     );
 }
