@@ -21,17 +21,17 @@ const PRIORITY_COLORS = {
 };
 
 const WORKLOAD_BG = (count) => {
-    if (count === 0) return 'bg-background';
-    if (count <= 2) return 'bg-emerald-50';
-    if (count <= 4) return 'bg-amber-50';
-    return 'bg-red-50';
+    if (count === 0) return 'bg-card';
+    if (count <= 2) return 'bg-emerald-500/5';
+    if (count <= 4) return 'bg-amber-500/5';
+    return 'bg-destructive/5';
 };
 
 const WORKLOAD_LABEL = (count) => {
     if (count === 0) return null;
-    if (count <= 2) return { label: 'Light', color: 'text-emerald-600 bg-emerald-100' };
-    if (count <= 4) return { label: 'Moderate', color: 'text-amber-600 bg-amber-100' };
-    return { label: 'Heavy', color: 'text-red-600 bg-red-100' };
+    if (count <= 2) return { label: 'Light', color: 'text-emerald-700 bg-emerald-500/10' };
+    if (count <= 4) return { label: 'Moderate', color: 'text-amber-700 bg-amber-500/10' };
+    return { label: 'Heavy', color: 'text-destructive bg-destructive/10' };
 };
 
 export default function MaintenanceCalendar() {
@@ -79,7 +79,7 @@ export default function MaintenanceCalendar() {
             const dateKey = task.scheduled_start_date;
             if (dateKey && days[dateKey] !== undefined) {
                 days[dateKey].push(task);
-            } else if (!dateKey || task.status === 'Assigned') {
+            } else if (!dateKey) {
                 unsched.push(task);
             }
         });
@@ -216,15 +216,15 @@ export default function MaintenanceCalendar() {
                         const overdue = isBefore(day, today);
                         const today_ = isToday(day);
                         return (
-                            <div key={key} className={`rounded-2xl border-2 transition-colors flex flex-col min-h-[200px] ${today_ ? 'border-teal' : overdue && dayTasks.length > 0 ? 'border-red-300' : 'border-border'} ${WORKLOAD_BG(dayTasks.length)}`}>
+                            <div key={key} className={`rounded-xl border flex flex-col min-h-[200px] overflow-hidden ${today_ ? 'border-primary shadow-sm ring-1 ring-primary/20' : overdue && dayTasks.length > 0 ? 'border-destructive/30' : 'border-border'} ${WORKLOAD_BG(dayTasks.length)}`}>
                                 {/* Day header */}
-                                <div className={`px-3 py-2.5 border-b border-inherit rounded-t-2xl flex items-center justify-between ${today_ ? 'bg-teal text-white' : overdue && dayTasks.length > 0 ? 'bg-red-50' : 'bg-card'}`}>
+                                <div className={`px-3 py-2.5 border-b flex items-center justify-between ${today_ ? 'bg-primary text-primary-foreground border-primary' : overdue && dayTasks.length > 0 ? 'bg-destructive/10 border-destructive/20' : 'bg-muted/30 border-border'}`}>
                                     <div>
-                                        <p className={`text-xs font-semibold uppercase tracking-wide ${today_ ? 'text-white/80' : 'text-muted-foreground'}`}>{format(day, 'EEE')}</p>
-                                        <p className={`text-lg font-bold leading-tight ${today_ ? 'text-white' : overdue && dayTasks.length > 0 ? 'text-red-600' : 'text-foreground'}`}>{format(day, 'd')}</p>
+                                        <p className={`text-[10px] font-semibold uppercase tracking-wider ${today_ ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>{format(day, 'EEE')}</p>
+                                        <p className={`text-lg font-bold leading-tight ${today_ ? 'text-primary-foreground' : overdue && dayTasks.length > 0 ? 'text-destructive' : 'text-foreground'}`}>{format(day, 'd')}</p>
                                     </div>
                                     {workload && (
-                                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${today_ ? 'bg-white/20 text-white' : workload.color}`}>{workload.label}</span>
+                                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${today_ ? 'bg-primary-foreground/20 text-primary-foreground' : workload.color}`}>{workload.label}</span>
                                     )}
                                 </div>
                                 {/* Droppable area */}
@@ -233,7 +233,7 @@ export default function MaintenanceCalendar() {
                                         <div
                                             ref={provided.innerRef}
                                             {...provided.droppableProps}
-                                            className={`flex-1 p-2 space-y-2 rounded-b-2xl transition-colors min-h-[120px] ${snapshot.isDraggingOver && canEdit ? 'bg-teal/10 ring-2 ring-inset ring-teal/30' : ''}`}
+                                            className={`flex-1 p-2 space-y-2 transition-colors min-h-[120px] ${snapshot.isDraggingOver && canEdit ? 'bg-primary/5 ring-1 ring-inset ring-primary/20' : ''}`}
                                         >
                                             {dayTasks.map((task, idx) => (
                                                 <Draggable key={task.id} draggableId={task.id} index={idx} isDragDisabled={!canEdit}>
@@ -245,7 +245,7 @@ export default function MaintenanceCalendar() {
                                                                 ref={prov.innerRef}
                                                                 {...prov.draggableProps}
                                                                 {...(canEdit ? prov.dragHandleProps : {})}
-                                                                className={`text-xs p-2 rounded-lg border-2 transition-shadow ${slaClasses} ${canEdit ? 'cursor-grab active:cursor-grabbing select-none' : 'cursor-default'} ${snap.isDragging ? 'shadow-lg rotate-1 opacity-90' : 'hover:shadow-sm'}`}
+                                                                className={`text-xs p-3 rounded-lg border bg-card transition-shadow ${slaClasses} ${canEdit ? 'cursor-grab active:cursor-grabbing select-none' : 'cursor-default'} ${snap.isDragging ? 'shadow-lg rotate-1 opacity-90 ring-1 ring-primary' : 'hover:shadow-sm'}`}
                                                             >
                                                                 <div className="flex justify-between items-start mb-1">
                                                                     <p className="font-bold truncate pr-1">{task.asset_name}</p>
@@ -279,18 +279,18 @@ export default function MaintenanceCalendar() {
                 </div>
 
                 {/* Unscheduled tasks */}
-                <div className="bg-card rounded-2xl border border-border">
-                    <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+                <div className="bg-card rounded-xl border border-border overflow-hidden">
+                    <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-muted/30">
                         <Clock className="w-4 h-4 text-muted-foreground" />
                         <h2 className="text-sm font-semibold text-foreground">Unscheduled Tasks</h2>
-                        <span className="ml-auto text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{unscheduled.length}</span>
+                        <span className="ml-auto text-xs bg-background border border-border text-muted-foreground px-2 py-0.5 rounded-full">{unscheduled.length}</span>
                     </div>
                     <Droppable droppableId="unscheduled" direction="horizontal" isDropDisabled={!canEdit}>
                         {(provided, snapshot) => (
                             <div
                                 ref={provided.innerRef}
                                 {...provided.droppableProps}
-                                className={`flex flex-wrap gap-3 p-4 min-h-[80px] rounded-b-2xl transition-colors ${snapshot.isDraggingOver && canEdit ? 'bg-teal/5 ring-2 ring-inset ring-teal/20' : ''}`}
+                                className={`flex flex-wrap gap-3 p-4 min-h-[80px] transition-colors ${snapshot.isDraggingOver && canEdit ? 'bg-primary/5 ring-1 ring-inset ring-primary/20' : ''}`}
                             >
                                 {unscheduled.length === 0 && !snapshot.isDraggingOver && (
                                     <p className="text-sm text-muted-foreground/50 py-2">All tasks are scheduled 🎉</p>
@@ -302,7 +302,7 @@ export default function MaintenanceCalendar() {
                                                 ref={prov.innerRef}
                                                 {...prov.draggableProps}
                                                 {...(canEdit ? prov.dragHandleProps : {})}
-                                                className={`text-xs p-2.5 rounded-xl border w-44 ${PRIORITY_COLORS[task.priority || 'Medium']} ${canEdit ? 'cursor-grab active:cursor-grabbing select-none' : 'cursor-default'} ${snap.isDragging ? 'shadow-lg rotate-1 opacity-90' : 'hover:shadow-sm'}`}
+                                                className={`text-xs p-3 bg-card rounded-lg border w-44 ${PRIORITY_COLORS[task.priority || 'Medium']} ${canEdit ? 'cursor-grab active:cursor-grabbing select-none' : 'cursor-default'} ${snap.isDragging ? 'shadow-lg rotate-1 opacity-90 ring-1 ring-primary' : 'hover:shadow-sm'}`}
                                             >
                                                 <p className="font-semibold truncate">{task.asset_name}</p>
                                                 <p className="opacity-70 truncate mt-0.5">{task.school_name}</p>
@@ -318,6 +318,34 @@ export default function MaintenanceCalendar() {
                     </Droppable>
                 </div>
             </DragDropContext>
+
+            <Dialog open={!!pendingReschedule} onOpenChange={(open) => !open && setPendingReschedule(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>SLA Deadline Exceeded</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm border border-destructive/20">
+                            This date is past the Service Level Agreement (SLA) deadline for this task. You must provide a reason for the delay.
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Reason for Delay</Label>
+                            <Textarea 
+                                value={rescheduleReason} 
+                                onChange={e => setRescheduleReason(e.target.value)} 
+                                placeholder="Why is this maintenance delayed?"
+                            />
+                        </div>
+                        <Button 
+                            className="w-full" 
+                            disabled={!rescheduleReason.trim() || saving}
+                            onClick={() => performUpdate(pendingReschedule.taskId, pendingReschedule.destDate, rescheduleReason)}
+                        >
+                            {saving ? 'Saving...' : 'Confirm Reschedule'}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
