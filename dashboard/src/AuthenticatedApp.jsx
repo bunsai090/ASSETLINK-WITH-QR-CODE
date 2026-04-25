@@ -7,6 +7,7 @@ import PageNotFound from './lib/PageNotFound';
 // Auth Pages
 import LocalLogin from './pages/auth/LocalLogin';
 import LocalRegister from './pages/auth/LocalRegister';
+import CompleteProfile from './pages/auth/CompleteProfile';
 
 // Layout
 import Layout from './components/Layout';
@@ -30,12 +31,11 @@ import RepairRequestsPrincipal from './pages/principal/RepairRequests';
 import Tasks from './pages/maintenance/Tasks';
 import MaintenanceCalendar from './pages/maintenance/MaintenanceCalendar';
 
-// Supervisor Pages
-import DashboardSupervisor from './pages/supervisor/Dashboard';
-import SupervisorOversight from './pages/supervisor/SupervisorOversight';
-
 // Public Pages
 import AssetPublic from './pages/public/AssetPublic';
+
+// Shared Pages
+import Profile from './pages/shared/Profile';
 
 const AuthenticatedApp = () => {
     const { currentUser, isLoadingAuth, authError } = useAuth();
@@ -62,6 +62,11 @@ const AuthenticatedApp = () => {
         );
     }
 
+    // Show role selection for new users (e.g. Google Login)
+    if (currentUser && !currentUser.role) {
+        return <CompleteProfile />;
+    }
+
     // Handle authentication errors
     if (authError) {
         if (authError.type === 'user_not_registered') {
@@ -72,9 +77,7 @@ const AuthenticatedApp = () => {
     // Role-based Dashboard selection
     const renderDashboard = () => {
         if (role === 'maintenance') return <DashboardMaintenance />;
-        if (role === 'principal') return <DashboardPrincipal />;
-        if (role === 'admin') return <DashboardPrincipal />; // Admins see Principal dashboard for oversight
-        if (role === 'supervisor') return <DashboardSupervisor />;
+        if (role === 'principal' || role === 'admin') return <DashboardPrincipal />;
         return <DashboardTeacher />; 
     };
 
@@ -100,8 +103,8 @@ const AuthenticatedApp = () => {
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/calendar" element={<MaintenanceCalendar />} />
                 <Route path="/schools" element={<Schools />} />
-                <Route path="/oversight" element={<SupervisorOversight />} />
                 <Route path="/asset-view" element={<AssetPublic />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="*" element={<PageNotFound />} />
             </Route>
         </Routes>
