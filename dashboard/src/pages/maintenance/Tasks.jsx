@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db, storage } from '@/lib/firebase';
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/AuthContext';
 import StatusBadge from '../../components/StatusBadge';
 import { Wrench, CheckCircle, Clock, AlertCircle, Camera, Image as ImageIcon, UploadCloud, X, ArrowRight, Shield } from 'lucide-react';
@@ -33,45 +31,31 @@ export default function Tasks() {
     useEffect(() => {
         if (!currentUser) return;
 
-        let tasksQuery;
-        if (role === 'maintenance') {
-            // Maintenance staff only see tasks assigned to them
-            tasksQuery = query(
-                collection(db, 'maintenance_tasks'),
-                where('assigned_to_name', '==', currentUser.full_name)
-            );
-        } else {
-            // Admin/Principal see everything
-            tasksQuery = query(
-                collection(db, 'maintenance_tasks'),
-                orderBy('created_at', 'desc')
-            );
-        }
-
-        const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-            const tasksList = snapshot.docs.map(doc => {
-                /** @type {any} */
-                const data = doc.data();
-                return { ...data, id: doc.id };
-            });
+        const fetchTasks = async () => {
+            let query = supabase.from('maintenance_tasks').select('*');
             
-            // Client-side sorting by date (descending)
-            const sorted = tasksList.sort((a, b) => {
-                /** @type {any} */ const taskA = a;
-                /** @type {any} */ const taskB = b;
-                const dateA = taskA.created_at?.toDate ? taskA.created_at.toDate() : new Date(0);
-                const dateB = taskB.created_at?.toDate ? taskB.created_at.toDate() : new Date(0);
-                return dateB - dateA;
-            });
-
-            setTasks(sorted);
+            if (role === 'maintenance') {
+                query = query.eq('assigned_to_name', currentUser.full_name);
+            }
+            
+            const { data, error } = await query.order('created_at', { ascending: false });
+            
+            if (data) setTasks(data);
             setLoading(false);
-        }, (error) => {
-            console.error('[AssetLink] Maintenance Tasks Listener Error:', error);
-            setLoading(false);
-        });
+        };
 
-        return () => unsubscribe();
+        fetchTasks();
+
+        const channel = supabase
+            .channel('tasks_sync')
+            .on('postgres_changes', { event: '*', table: 'maintenance_tasks' }, () => {
+                fetchTasks();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [currentUser, role]);
 
     function openTask(task) {
@@ -181,35 +165,46 @@ export default function Tasks() {
     async function handleUpdate() {
         setSaving(true);
         try {
+            const now = new Date().toISOString();
             const updateData = {
                 status: form.status,
                 notes: form.notes,
                 materials_used: form.materials_used,
                 actual_cost: form.actual_cost ? parseFloat(form.actual_cost) : 0,
                 completion_photo: form.completion_photo,
-                updated_at: serverTimestamp()
+                updated_at: now
             };
 
             // Business Logic: If marked as Completed, move to verification stage
             if (form.status === 'Completed') {
                 updateData.status = 'Pending Teacher Verification';
-                updateData.completed_at = serverTimestamp();
+                updateData.completed_at = now;
             }
 
             // 1. Update the Maintenance Task
-            await updateDoc(doc(db, 'maintenance_tasks', selected.id), updateData);
+            const { error: mtError } = await supabase
+                .from('maintenance_tasks')
+                .update(updateData)
+                .eq('id', selected.id);
+
+            if (mtError) throw mtError;
 
             // 2. Sync status to the original Repair Request
             if (selected.repair_request_id) {
-                await updateDoc(doc(db, 'repair_requests', selected.repair_request_id), {
-                    status: updateData.status,
-                    maintenance_notes: form.notes,
-                    materials_used: form.materials_used,
-                    actual_cost: updateData.actual_cost,
-                    completion_photo: form.completion_photo,
-                    maintenance_staff_name: selected.assigned_to_name,
-                    updated_at: serverTimestamp()
-                });
+                const { error: rrError } = await supabase
+                    .from('repair_requests')
+                    .update({
+                        status: updateData.status,
+                        maintenance_notes: form.notes,
+                        materials_used: form.materials_used,
+                        actual_cost: updateData.actual_cost,
+                        completion_photo: form.completion_photo,
+                        maintenance_staff_name: selected.assigned_to_name,
+                        updated_at: now
+                    })
+                    .eq('id', selected.repair_request_id);
+                
+                if (rrError) throw rrError;
             }
 
             sileo.success({
@@ -308,7 +303,7 @@ export default function Tasks() {
                                     <StatusBadge status={task.status} size="xs" />
                                 </div>
                                 <div className="hidden sm:block text-xs text-muted-foreground">
-                                    {task.created_at?.toDate ? format(task.created_at.toDate(), 'MMM d, yyyy') : 'Recent'}
+                                    {task.created_at ? format(new Date(task.created_at), 'MMM d, yyyy') : 'Recent'}
                                 </div>
                             </div>
                         ))}
