@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import {
     Menu, X, LogOut, LayoutDashboard, Package, AlertTriangle,
-    Wrench, BarChart3, CalendarDays, School, Eye, ChevronRight, Bell
+    Wrench, BarChart3, CalendarDays, School, Eye, ChevronRight, Bell, User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sileo } from 'sileo';
@@ -13,21 +13,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 
 const navItems = [
-    { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'teacher', 'principal', 'maintenance', 'supervisor'] },
-    { path: '/assets', label: 'Assets', icon: Package, roles: ['admin', 'teacher', 'principal'] },
-    { path: '/repair-requests', label: 'Repair Requests', icon: AlertTriangle, roles: ['admin', 'teacher', 'principal'] },
-    { path: '/report-damage', label: 'Report Damage', icon: AlertTriangle, roles: ['admin', 'teacher'] },
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'teacher', 'principal', 'maintenance'] },
+    { path: '/assets', label: 'Assets', icon: Package, roles: ['admin', 'principal'] },
+    { path: '/repair-requests', label: 'Repair Requests', icon: AlertTriangle, roles: ['admin', 'principal', 'teacher'] },
+    { path: '/report-damage', label: 'Report Damage', icon: AlertTriangle, roles: ['teacher'] },
     { path: '/tasks', label: 'My Tasks', icon: Wrench, roles: ['admin', 'maintenance'] },
     { path: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin', 'principal'] },
     { path: '/calendar', label: 'Calendar', icon: CalendarDays, roles: ['admin', 'maintenance', 'principal'] },
-    { path: '/schools', label: 'Schools', icon: School, roles: ['admin', 'supervisor'] },
-    { path: '/oversight', label: 'Oversight', icon: Eye, roles: ['supervisor'] },
+    { path: '/schools', label: 'Schools', icon: School, roles: ['admin', 'principal'] },
+    { path: '/profile', label: 'My Profile', icon: User, roles: ['admin', 'teacher', 'principal', 'maintenance'] },
 ];
 
 const navGroups = [
     { label: 'Main', paths: ['/', '/assets', '/repair-requests', '/report-damage'] },
     { label: 'Operations', paths: ['/tasks', '/calendar'] },
     { label: 'Intelligence', paths: ['/analytics', '/schools', '/oversight'] },
+    { label: 'Account', paths: ['/profile'] },
 ];
 
 export default function Layout() {
@@ -121,17 +122,23 @@ export default function Layout() {
                 {/* User */}
                 <div className="p-3 border-t border-sidebar-border flex-shrink-0">
                     <div className="flex items-center gap-2.5 p-2 rounded-md hover:bg-sidebar-accent transition-colors group">
-                        <div className="w-7 h-7 rounded-full bg-sidebar-accent flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-white border border-white/10">
-                            {(currentUser?.full_name?.[0] || currentUser?.email?.[0] || 'U').toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-medium text-sidebar-accent-foreground truncate leading-tight">
-                                {currentUser?.full_name || 'System User'}
-                            </p>
-                            <p className="label-mono text-sidebar-foreground/40 leading-none mt-0.5">
-                                {role}
-                            </p>
-                        </div>
+                        <Link
+                            to="/profile"
+                            onClick={() => setSidebarOpen(false)}
+                            className="flex items-center gap-2.5 flex-1 min-w-0"
+                        >
+                            <div className="w-7 h-7 rounded-full bg-sidebar-accent flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-white border border-white/10">
+                                {(currentUser?.full_name?.[0] || currentUser?.email?.[0] || 'U').toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-medium text-sidebar-accent-foreground truncate leading-tight">
+                                    {currentUser?.full_name || 'System User'}
+                                </p>
+                                <p className="label-mono text-sidebar-foreground/40 leading-none mt-0.5">
+                                    {role === 'admin' ? 'Principal' : role.charAt(0).toUpperCase() + role.slice(1)}
+                                </p>
+                            </div>
+                        </Link>
                         <button
                             onClick={() => setLogoutModalOpen(true)}
                             title="Sign out"
