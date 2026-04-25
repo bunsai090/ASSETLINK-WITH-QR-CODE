@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import StatusBadge from '../../components/StatusBadge';
 import { ChevronLeft, ChevronRight, CalendarDays, Wrench, AlertTriangle, Clock, Lock } from 'lucide-react';
@@ -51,20 +50,32 @@ export default function MaintenanceCalendar() {
     useEffect(() => { 
         if (!currentUser?.full_name) return;
         
-        const tasksQuery = query(
-            collection(db, 'maintenance_tasks'),
-            where('assigned_to_name', '==', currentUser.full_name)
-        );
-
-        const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setTasks(data);
-            distribute(data);
+        const fetchTasks = async () => {
+            const { data, error } = await supabase
+                .from('maintenance_tasks')
+                .select('*')
+                .eq('assigned_to_name', currentUser.full_name);
+            
+            if (data) {
+                setTasks(data);
+                distribute(data);
+            }
             setLoading(false);
-        });
+        };
 
-        return () => unsubscribe();
-    }, [currentUser, weekStart]); // Added weekStart to ensure distribution updates when browsing weeks
+        fetchTasks();
+
+        const channel = supabase
+            .channel('calendar_tasks')
+            .on('postgres_changes', { event: '*', table: 'maintenance_tasks' }, () => {
+                fetchTasks();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [currentUser, weekStart]);
 
     const loadTasks = () => {};
 
@@ -131,7 +142,7 @@ export default function MaintenanceCalendar() {
         try {
             const updatePayload = { 
                 scheduled_start_date: destDate || null,
-                updated_at: serverTimestamp()
+                updated_at: new Date().toISOString()
             };
             
             if (reason) {
@@ -140,7 +151,13 @@ export default function MaintenanceCalendar() {
                 updatePayload.reschedule_count = (task?.reschedule_count || 0) + 1;
             }
 
-            await updateDoc(doc(db, 'maintenance_tasks', taskId), updatePayload);
+            const { error } = await supabase
+                .from('maintenance_tasks')
+                .update(updatePayload)
+                .eq('id', taskId);
+
+            if (error) throw error;
+            
             toast.success(destDate ? `Task scheduled for ${format(parseISO(destDate), 'EEE, MMM d')}` : 'Task moved to unscheduled');
         } catch (err) {
             toast.error('Failed to update task');
