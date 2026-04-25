@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/AuthContext';
 import StatusBadge from '../../components/StatusBadge';
 import { AlertTriangle, Search, Wrench, CheckCircle, Clock, Shield, Star, MessageSquare } from 'lucide-react';
@@ -30,43 +29,42 @@ export default function TeacherRepairRequests() {
     useEffect(() => {
         if (!currentUser) return;
 
-        const unsubscribe = onSnapshot(
-            collection(db, 'repair_requests'),
-            (snapshot) => {
-                const all = snapshot.docs.map(doc => {
-                    /** @type {any} */
-                    const data = doc.data();
-                    return { ...data, id: doc.id };
-                });
+        const fetchRequests = async () => {
+            const { data, error } = await supabase
+                .from('repair_requests')
+                .select('*')
+                .or(`reported_by_email.eq.${currentUser.email},school_id.eq.${currentUser.school_id}`)
+                .order('created_at', { ascending: false });
+            
+            if (data) {
                 const teacherEmail = currentUser.email?.toLowerCase();
                 const teacherName = currentUser.full_name?.toLowerCase();
                 
-                const mine = all
-                    .filter(r => {
-                        const emailMatches = r.reported_by_email?.toLowerCase() === teacherEmail;
-                        const nameMatches = r.reported_by_name?.toLowerCase() === teacherName;
-                        const schoolMatches = r.school_id === currentUser.school_id;
-                        
-                        // Verification items for their school OR their own reports
-                        const needsVerification = r.status === 'Pending Teacher Verification';
-                        
-                        return emailMatches || nameMatches || (needsVerification && schoolMatches);
-                    })
-                    .sort((a, b) => {
-                        const dateA = a.created_at?.toDate ? a.created_at.toDate() : new Date(0);
-                        const dateB = b.created_at?.toDate ? b.created_at.toDate() : new Date(0);
-                        return dateB - dateA;
-                    });
-                setRequests(mine);
-                setLoading(false);
-            },
-            (error) => {
-                console.error('Teacher RepairRequests error:', error);
-                setLoading(false);
+                const filteredData = data.filter(r => {
+                    const emailMatches = r.reported_by_email?.toLowerCase() === teacherEmail;
+                    const nameMatches = r.reported_by_name?.toLowerCase() === teacherName;
+                    const schoolMatches = r.school_id === currentUser.school_id;
+                    const needsVerification = r.status === 'Pending Teacher Verification';
+                    
+                    return emailMatches || nameMatches || (needsVerification && schoolMatches);
+                });
+                setRequests(filteredData);
             }
-        );
+            setLoading(false);
+        };
 
-        return () => unsubscribe();
+        fetchRequests();
+
+        const channel = supabase
+            .channel('repair_requests_all')
+            .on('postgres_changes', { event: '*', table: 'repair_requests' }, () => {
+                fetchRequests();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [currentUser]);
 
     const filtered = requests.filter(r => {
@@ -78,25 +76,29 @@ export default function TeacherRepairRequests() {
     async function handleVerifyRepair() {
         setSaving(true);
         try {
-            // 1. Update the Repair Request
-            await updateDoc(doc(db, 'repair_requests', selected.id), { 
-                status: 'Completed',
-                teacher_confirmation: true, 
-                completed_at: serverTimestamp(),
-                updated_at: serverTimestamp()
-            });
-
-            // 2. Synchronize with Maintenance Tasks
-            const taskQuery = query(collection(db, 'maintenance_tasks'), where('repair_request_id', '==', selected.id));
-            const taskSnapshot = await getDocs(taskQuery);
+            const now = new Date().toISOString();
             
-            const syncPromises = taskSnapshot.docs.map(taskDoc => 
-                updateDoc(doc(db, 'maintenance_tasks', taskDoc.id), {
+            const { error: rrError } = await supabase
+                .from('repair_requests')
+                .update({ 
                     status: 'Completed',
-                    updated_at: serverTimestamp()
+                    teacher_confirmation: true, 
+                    completed_at: now,
+                    updated_at: now
                 })
-            );
-            await Promise.all(syncPromises);
+                .eq('id', selected.id);
+
+            if (rrError) throw rrError;
+
+            const { error: taskError } = await supabase
+                .from('maintenance_tasks')
+                .update({
+                    status: 'Completed',
+                    updated_at: now
+                })
+                .eq('repair_request_id', selected.id);
+
+            if (taskError) throw taskError;
 
             sileo.success({
                 title: 'Repair Verified',
@@ -104,6 +106,7 @@ export default function TeacherRepairRequests() {
             });
             setSelected(null);
         } catch (error) {
+            console.error('Verify error:', error);
             sileo.error({ title: 'Sync Failure', description: 'Could not verify the restoration cycle.' });
         } finally {
             setSaving(false);
@@ -120,23 +123,29 @@ export default function TeacherRepairRequests() {
         }
         setSaving(true);
         try {
-            await updateDoc(doc(db, 'repair_requests', selected.id), {
-                status: 'In Progress',
-                teacher_verification_notes: verificationFeedback,
-                updated_at: serverTimestamp()
-            });
-
-            const taskQuery = query(collection(db, 'maintenance_tasks'), where('repair_request_id', '==', selected.id));
-            const taskSnapshot = await getDocs(taskQuery);
+            const now = new Date().toISOString();
             
-            const syncPromises = taskSnapshot.docs.map(taskDoc => 
-                updateDoc(doc(db, 'maintenance_tasks', taskDoc.id), {
+            const { error: rrError } = await supabase
+                .from('repair_requests')
+                .update({
+                    status: 'In Progress',
+                    teacher_verification_notes: verificationFeedback,
+                    updated_at: now
+                })
+                .eq('id', selected.id);
+
+            if (rrError) throw rrError;
+
+            const { error: taskError } = await supabase
+                .from('maintenance_tasks')
+                .update({
                     status: 'In Progress',
                     notes: `REWORK REQUESTED: ${verificationFeedback}`, 
-                    updated_at: serverTimestamp()
+                    updated_at: now
                 })
-            );
-            await Promise.all(syncPromises);
+                .eq('repair_request_id', selected.id);
+
+            if (taskError) throw taskError;
 
             sileo.success({
                 title: 'Tactical Rework Initiated',
@@ -145,6 +154,7 @@ export default function TeacherRepairRequests() {
             setVerificationFeedback('');
             setSelected(null);
         } catch (error) {
+            console.error('Reject error:', error);
             sileo.error({ title: 'Sync Failure', description: 'Could not broadcast feedback.' });
         } finally {
             setSaving(false);
@@ -240,7 +250,7 @@ export default function TeacherRepairRequests() {
                                 </div>
                                 <div className="hidden sm:flex items-center">
                                     <span className="text-xs text-muted-foreground">
-                                        {req.created_at?.toDate ? format(req.created_at.toDate(), 'MMM d, yyyy') : ''}
+                                        {req.created_at ? format(new Date(req.created_at), 'MMM d, yyyy') : ''}
                                     </span>
                                 </div>
                             </div>
