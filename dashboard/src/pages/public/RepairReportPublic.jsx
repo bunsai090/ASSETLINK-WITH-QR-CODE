@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { CheckCircle, Wrench, DollarSign, Package, Image } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -15,9 +14,14 @@ export default function RepairReportPublic() {
         if (!requestId) { setNotFound(true); setLoading(false); return; }
         async function load() {
             try {
-                const snap = await getDoc(doc(db, 'repair_requests', requestId));
-                if (!snap.exists()) { setNotFound(true); setLoading(false); return; }
-                setReport({ id: snap.id, ...snap.data() });
+                const { data, error } = await supabase
+                    .from('repair_requests')
+                    .select('*')
+                    .eq('id', requestId)
+                    .single();
+                
+                if (error || !data) { setNotFound(true); setLoading(false); return; }
+                setReport(data);
             } catch (e) {
                 setNotFound(true);
             } finally {
@@ -133,7 +137,7 @@ export default function RepairReportPublic() {
                         <div>
                             <p className="text-sm font-black text-emerald-800">Repair Completed</p>
                             <p className="text-xs text-emerald-600 mt-0.5">
-                                {format(report.completed_at.toDate(), 'MMMM d, yyyy · h:mm a')}
+                                {format(new Date(report.completed_at), 'MMMM d, yyyy · h:mm a')}
                             </p>
                         </div>
                     </div>
