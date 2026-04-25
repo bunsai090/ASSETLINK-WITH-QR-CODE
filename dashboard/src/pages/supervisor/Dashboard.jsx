@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/AuthContext';
 import StatsCard from '../../components/StatsCard';
 import StatusBadge from '../../components/StatusBadge';
@@ -13,23 +12,25 @@ export default function SupervisorDashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubRequests = onSnapshot(collection(db, 'repair_requests'), (snap) => {
-            const list = snap.docs
-                .map(doc => /** @type {any} */({ ...doc.data(), id: doc.id }))
-                .sort((a, b) => {
-                    const dateA = a.created_at?.toDate ? a.created_at.toDate() : new Date(0);
-                    const dateB = b.created_at?.toDate ? b.created_at.toDate() : new Date(0);
-                    return dateB - dateA;
-                });
-            setRequests(list);
+        const fetchData = async () => {
+            const [requestsRes, assetsRes] = await Promise.all([
+                supabase.from('repair_requests').select('*').order('created_at', { ascending: false }),
+                supabase.from('assets').select('*')
+            ]);
+
+            if (requestsRes.data) setRequests(requestsRes.data);
+            if (assetsRes.data) setAssets(assetsRes.data);
             setLoading(false);
-        });
+        };
 
-        const unsubAssets = onSnapshot(collection(db, 'assets'), (snap) => {
-            setAssets(snap.docs.map(doc => /** @type {any} */({ ...doc.data(), id: doc.id })));
-        });
+        fetchData();
 
-        return () => { unsubRequests(); unsubAssets(); };
+        const channel = supabase.channel('supervisor_dashboard')
+            .on('postgres_changes', { event: '*', table: 'repair_requests' }, fetchData)
+            .on('postgres_changes', { event: '*', table: 'assets' }, fetchData)
+            .subscribe();
+
+        return () => supabase.removeChannel(channel);
     }, []);
 
     if (loading) {
