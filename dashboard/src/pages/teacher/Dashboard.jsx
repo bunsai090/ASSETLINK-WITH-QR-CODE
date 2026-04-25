@@ -6,8 +6,7 @@ import StatusBadge from '../../components/StatusBadge';
 import { Package, AlertTriangle, Wrench, Clock, TrendingUp, Plus, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
 export default function TeacherDashboard() {
@@ -19,28 +18,36 @@ export default function TeacherDashboard() {
     useEffect(() => {
         if (!currentUser) return;
 
-        const assetsQuery = query(collection(db, 'assets'), orderBy('created_at', 'desc'));
-        const unsubscribeAssets = onSnapshot(assetsQuery, (snapshot) => {
-            setAssets(snapshot.docs.map(doc => /** @type {any} */({ ...doc.data(), id: doc.id })));
-        });
+        const fetchData = async () => {
+            const [assetsRes, requestsRes] = await Promise.all([
+                supabase.from('assets').select('*').order('created_at', { ascending: false }),
+                supabase.from('repair_requests').select('*').order('created_at', { ascending: false })
+            ]);
 
-        const requestsQuery = query(collection(db, 'repair_requests'), orderBy('created_at', 'desc'));
-        const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
-            const teacherEmail = currentUser.email?.toLowerCase();
-            const teacherName = currentUser.full_name?.toLowerCase();
-            const list = snapshot.docs
-                .map(doc => /** @type {any} */({ ...doc.data(), id: doc.id }))
-                .filter(r => {
+            if (assetsRes.data) setAssets(assetsRes.data);
+            if (requestsRes.data) {
+                const teacherEmail = currentUser.email?.toLowerCase();
+                const teacherName = currentUser.full_name?.toLowerCase();
+                const filtered = requestsRes.data.filter(r => {
                     const emailMatches = r.reported_by_email?.toLowerCase() === teacherEmail;
                     const nameMatches = r.reported_by_name?.toLowerCase() === teacherName;
                     const schoolMatches = r.school_id === currentUser.school_id;
                     return emailMatches || nameMatches || (r.status === 'Pending Teacher Verification' && schoolMatches);
                 });
-            setRequests(list);
+                setRequests(filtered);
+            }
             setLoading(false);
-        });
+        };
 
-        return () => { unsubscribeAssets(); unsubscribeRequests(); };
+        fetchData();
+
+        const channelAssets = supabase.channel('teacher_assets_sync').on('postgres_changes', { event: '*', table: 'assets' }, fetchData).subscribe();
+        const channelRequests = supabase.channel('teacher_requests_sync').on('postgres_changes', { event: '*', table: 'repair_requests' }, fetchData).subscribe();
+
+        return () => {
+            supabase.removeChannel(channelAssets);
+            supabase.removeChannel(channelRequests);
+        };
     }, [currentUser]);
 
     const recent = requests.slice(0, 5);
@@ -127,7 +134,7 @@ export default function TeacherDashboard() {
                                         <div className="flex flex-col items-end gap-1">
                                             <StatusBadge status={req.status} size="sm" />
                                             <span className="label-mono text-muted-foreground/50">
-                                                {req.created_at?.toDate ? format(req.created_at.toDate(), 'MMM d') : ''}
+                                                {req.created_at ? format(new Date(req.created_at), 'MMM d') : ''}
                                             </span>
                                         </div>
                                     </div>
