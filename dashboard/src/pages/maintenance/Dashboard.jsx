@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/AuthContext';
 import StatsCard from '../../components/StatsCard';
 import StatusBadge from '../../components/StatusBadge';
@@ -18,21 +17,29 @@ export default function MaintenanceDashboard() {
 
     useEffect(() => {
         if (!currentUser) return;
-        const tasksQuery = query(collection(db, 'maintenance_tasks'));
-        const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-            const list = snapshot.docs.map(doc => /** @type {any} */({ ...doc.data(), id: doc.id }));
-            const sorted = list.sort((a, b) => {
-                const dateA = a.created_at?.toDate ? a.created_at.toDate() : new Date(0);
-                const dateB = b.created_at?.toDate ? b.created_at.toDate() : new Date(0);
-                return dateB - dateA;
-            });
-            setTasks(sorted);
+
+        const fetchTasks = async () => {
+            const { data, error } = await supabase
+                .from('maintenance_tasks')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (data) setTasks(data);
             setLoading(false);
-        }, (error) => {
-            console.error('[AssetLink] Maintenance Dashboard Listener Error:', error);
-            setLoading(false);
-        });
-        return () => unsubscribe();
+        };
+
+        fetchTasks();
+
+        const channel = supabase
+            .channel('tasks_maintenance')
+            .on('postgres_changes', { event: '*', table: 'maintenance_tasks' }, () => {
+                fetchTasks();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [currentUser]);
 
     const myTasks = tasks.filter(t =>
@@ -132,7 +139,7 @@ export default function MaintenanceDashboard() {
                                         </div>
                                         <StatusBadge status={task.status} size="sm" />
                                         <span className="label-mono text-muted-foreground/50 text-right">
-                                            {task.created_at ? format(task.created_at.toDate(), 'MMM d') : 'Recent'}
+                                            {task.created_at ? format(new Date(task.created_at), 'MMM d') : 'Recent'}
                                         </span>
                                     </div>
                                 </Link>
