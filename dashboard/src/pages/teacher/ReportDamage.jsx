@@ -7,8 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { sileo } from 'sileo';
 import { useNavigate } from 'react-router-dom';
-import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 
 export default function ReportDamage() {
     const { currentUser } = useAuth();
@@ -26,12 +25,18 @@ export default function ReportDamage() {
     const fileRef = useRef(null);
 
     useEffect(() => {
-        const assetsQuery = query(collection(db, 'assets'), orderBy('name', 'asc'));
-        const unsubscribe = onSnapshot(assetsQuery, (snapshot) => {
-            const assetsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setAssets(assetsList);
-        });
-        return () => unsubscribe();
+        const fetchAssets = async () => {
+            const { data, error } = await supabase
+                .from('assets')
+                .select('*')
+                .order('name', { ascending: true });
+            
+            if (data) setAssets(data);
+        };
+        fetchAssets();
+
+        const channel = supabase.channel('assets_report_sync').on('postgres_changes', { event: '*', table: 'assets' }, fetchAssets).subscribe();
+        return () => supabase.removeChannel(channel);
     }, []);
 
     const filteredAssets = assets.filter(a =>
@@ -56,8 +61,9 @@ export default function ReportDamage() {
         setSubmitting(true);
         try {
             const reqNum = `RR-${Date.now().toString().slice(-6)}`;
+            const now = new Date().toISOString();
             
-            await addDoc(collection(db, 'repair_requests'), {
+            const { error } = await supabase.from('repair_requests').insert({
                 request_number: reqNum,
                 asset_id: selectedAsset.id,
                 asset_name: selectedAsset.name,
@@ -70,9 +76,11 @@ export default function ReportDamage() {
                 priority: form.priority,
                 photo_url: null, 
                 status: 'Pending',
-                created_at: serverTimestamp(),
-                updated_at: serverTimestamp()
+                created_at: now,
+                updated_at: now
             });
+
+            if (error) throw error;
 
             sileo.success({
                 title: 'Report Submitted',
