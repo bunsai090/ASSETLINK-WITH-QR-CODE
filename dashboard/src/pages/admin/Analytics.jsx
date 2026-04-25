@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import { TrendingUp, Download, BarChart3, PieChart as PieIcon, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,32 +17,30 @@ export default function Analytics() {
     useEffect(() => {
         setLoading(true);
         
-        // Listen to Repair Requests
-        const unsubRequests = onSnapshot(collection(db, 'repair_requests'), (snap) => {
-            const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setRequests(list);
-        }, (err) => console.error("Repair Requests Error:", err));
+        const fetchData = async () => {
+            const [reqs, asts, tsks] = await Promise.all([
+                supabase.from('repair_requests').select('*'),
+                supabase.from('assets').select('*'),
+                supabase.from('maintenance_tasks').select('*')
+            ]);
 
-        // Listen to Assets
-        const unsubAssets = onSnapshot(collection(db, 'assets'), (snap) => {
-            const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setAssets(list);
-        }, (err) => console.error("Assets Error:", err));
+            if (reqs.data) setRequests(reqs.data);
+            if (asts.data) setAssets(asts.data);
+            if (tsks.data) setTasks(tsks.data);
+            setLoading(false);
+        };
 
-        // Listen to Maintenance Tasks
-        const unsubTasks = onSnapshot(collection(db, 'maintenance_tasks'), (snap) => {
-            const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setTasks(list);
-            setLoading(false);
-        }, (err) => {
-            console.error("Maintenance Tasks Error:", err);
-            setLoading(false);
-        });
+        fetchData();
+
+        const channel = supabase
+            .channel('analytics_sync')
+            .on('postgres_changes', { event: '*', table: 'repair_requests' }, fetchData)
+            .on('postgres_changes', { event: '*', table: 'assets' }, fetchData)
+            .on('postgres_changes', { event: '*', table: 'maintenance_tasks' }, fetchData)
+            .subscribe();
 
         return () => {
-            unsubRequests();
-            unsubAssets();
-            unsubTasks();
+            supabase.removeChannel(channel);
         };
     }, []);
 
@@ -73,22 +70,22 @@ export default function Analytics() {
         return {
             date: format(d, 'MMM d'),
             requests: requests.filter(r => {
-                const date = r.created_at?.toDate ? r.created_at.toDate() : (r.created_at ? new Date(r.created_at) : null);
+                const date = r.created_at ? new Date(r.created_at) : null;
                 return date && format(date, 'yyyy-MM-dd') === dateStr;
             }).length,
             completed: requests.filter(r => {
-                const date = r.completed_at?.toDate ? r.completed_at.toDate() : (r.completed_at ? new Date(r.completed_at) : null);
+                const date = r.completed_at ? new Date(r.completed_at) : null;
                 return date && format(date, 'yyyy-MM-dd') === dateStr;
             }).length,
         };
     });
 
     const avgResolutionTime = (() => {
-        const completedRes = requests.filter(r => r.status === 'Completed' && (r.created_at?.toDate || r.created_at) && (r.completed_at?.toDate || r.completed_at));
+        const completedRes = requests.filter(r => r.status === 'Completed' && r.created_at && r.completed_at);
         if (!completedRes.length) return 0;
         const avg = completedRes.reduce((sum, r) => {
-            const start = r.created_at?.toDate ? r.created_at.toDate().getTime() : new Date(r.created_at).getTime();
-            const end = r.completed_at?.toDate ? r.completed_at.toDate().getTime() : new Date(r.completed_at).getTime();
+            const start = new Date(r.created_at).getTime();
+            const end = new Date(r.completed_at).getTime();
             const diff = end - start;
             return sum + diff / (1000 * 60 * 60 * 24);
         }, 0) / completedRes.length;
