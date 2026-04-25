@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { 
     Eye, Search, Filter, ArrowUpRight, 
     ShieldAlert, Activity, CheckCircle2, 
@@ -19,19 +18,30 @@ export default function SupervisorOversight() {
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        // Real-time listeners for strategic oversight
-        const unsubAssets = onSnapshot(query(collection(db, 'assets')), (snapshot) => {
-            setAssets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        });
-        const unsubRequests = onSnapshot(query(collection(db, 'repair_requests')), (snapshot) => {
-            setRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        });
-        const unsubSchools = onSnapshot(query(collection(db, 'schools'), orderBy('name', 'asc')), (snapshot) => {
-            setSchools(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            setLoading(false);
-        });
+        const fetchAll = async () => {
+            const [assetsRes, requestsRes, schoolsRes] = await Promise.all([
+                supabase.from('assets').select('*'),
+                supabase.from('repair_requests').select('*'),
+                supabase.from('schools').select('*').order('name', { ascending: true })
+            ]);
 
-        return () => { unsubAssets(); unsubRequests(); unsubSchools(); };
+            if (assetsRes.data) setAssets(assetsRes.data);
+            if (requestsRes.data) setRequests(requestsRes.data);
+            if (schoolsRes.data) setSchools(schoolsRes.data);
+            setLoading(false);
+        };
+
+        fetchAll();
+
+        const assetsChannel = supabase.channel('oversight_assets').on('postgres_changes', { event: '*', table: 'assets' }, fetchAll).subscribe();
+        const requestsChannel = supabase.channel('oversight_requests').on('postgres_changes', { event: '*', table: 'repair_requests' }, fetchAll).subscribe();
+        const schoolsChannel = supabase.channel('oversight_schools').on('postgres_changes', { event: '*', table: 'schools' }, fetchAll).subscribe();
+
+        return () => {
+            supabase.removeChannel(assetsChannel);
+            supabase.removeChannel(requestsChannel);
+            supabase.removeChannel(schoolsChannel);
+        };
     }, []);
 
     // Oversight Analytics Calculation
