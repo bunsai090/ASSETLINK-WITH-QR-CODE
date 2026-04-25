@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { School, Plus, Edit2, Trash2, MapPin, Phone, Mail, Users, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,12 +20,28 @@ export default function Schools() {
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
-        const q = query(collection(db, 'schools'), orderBy('name', 'asc'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setSchools(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const fetchSchools = async () => {
+            const { data, error } = await supabase
+                .from('schools')
+                .select('*')
+                .order('name', { ascending: true });
+            
+            if (data) setSchools(data);
             setLoading(false);
-        });
-        return () => unsubscribe();
+        };
+
+        fetchSchools();
+
+        const channel = supabase
+            .channel('schools_all')
+            .on('postgres_changes', { event: '*', table: 'schools' }, () => {
+                fetchSchools();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     function openCreate() {
@@ -46,21 +61,22 @@ export default function Schools() {
         setSaving(true);
         try {
             if (editing) {
-                await updateDoc(doc(db, 'schools', editing.id), { 
-                    ...form,
-                    updated_at: serverTimestamp()
-                });
+                const { error } = await supabase
+                    .from('schools')
+                    .update({ ...form, updated_at: new Date().toISOString() })
+                    .eq('id', editing.id);
+                if (error) throw error;
                 toast.success('School updated');
             } else {
-                await addDoc(collection(db, 'schools'), {
-                    ...form,
-                    created_at: serverTimestamp(),
-                    updated_at: serverTimestamp()
-                });
+                const { error } = await supabase
+                    .from('schools')
+                    .insert([{ ...form }]);
+                if (error) throw error;
                 toast.success('School added');
             }
             setShowModal(false);
         } catch (error) {
+            console.error('Save error:', error);
             toast.error('Failed to save school');
         } finally {
             setSaving(false);
@@ -70,7 +86,11 @@ export default function Schools() {
     async function handleDelete(id) {
         if (!confirm('Delete this school?')) return;
         try {
-            await deleteDoc(doc(db, 'schools', id));
+            const { error } = await supabase
+                .from('schools')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
             toast.success('School deleted');
         } catch (error) {
             toast.error('Failed to delete school');
@@ -87,7 +107,7 @@ export default function Schools() {
                         Manage academic campuses and jurisdictional assets.
                     </p>
                 </div>
-                {role === 'admin' && (
+                {(role === 'admin' || role === 'principal') && (
                     <Button onClick={openCreate} className="h-9 gap-2">
                         <Plus className="w-4 h-4" /> Add Institution
                     </Button>
@@ -103,7 +123,7 @@ export default function Schools() {
                     <School className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
                     <h3 className="text-lg font-medium text-foreground mb-1">No Institutions Found</h3>
                     <p className="text-muted-foreground text-sm mb-6">No academic institutions have been registered yet.</p>
-                    {role === 'admin' && (
+                    {(role === 'admin' || role === 'principal') && (
                         <Button onClick={openCreate} variant="outline" className="h-9">
                             Add Primary Institution
                         </Button>
@@ -148,7 +168,7 @@ export default function Schools() {
                                         <td className="px-6 py-4">
                                             <span className="text-foreground">{school.principal_name || "—"}</span>
                                         </td>
-                                        {role === 'admin' && (
+                                        {(role === 'admin' || role === 'principal') && (
                                             <td className="px-6 py-4 text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
@@ -156,10 +176,13 @@ export default function Schools() {
                                                             <MoreHorizontal className="w-4 h-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
+                                                    {/* @ts-ignore */}
                                                     <DropdownMenuContent align="end">
+                                                        {/* @ts-ignore */}
                                                         <DropdownMenuItem onClick={() => openEdit(school)}>
                                                             <Edit2 className="w-4 h-4 mr-2" /> Edit Institution
                                                         </DropdownMenuItem>
+                                                        {/* @ts-ignore */}
                                                         <DropdownMenuItem onClick={() => handleDelete(school.id)} className="text-destructive">
                                                             <Trash2 className="w-4 h-4 mr-2" /> Delete Institution
                                                         </DropdownMenuItem>
