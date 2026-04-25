@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import StatusBadge from '../../components/StatusBadge';
 import { Package, Wrench, Calendar, MapPin, Tag, AlertTriangle, ArrowRight, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
@@ -19,18 +18,22 @@ export default function AssetPublic() {
         if (!assetId) { setNotFound(true); setLoading(false); return; }
         async function load() {
             try {
-                const assetDoc = await getDoc(doc(db, 'assets', assetId));
-                if (!assetDoc.exists()) { setNotFound(true); setLoading(false); return; }
-                const assetData = { id: assetDoc.id, ...assetDoc.data() };
+                const { data: assetData, error: assetError } = await supabase
+                    .from('assets')
+                    .select('*')
+                    .eq('id', assetId)
+                    .single();
+                
+                if (assetError || !assetData) { setNotFound(true); setLoading(false); return; }
                 setAsset(assetData);
 
-                const repairsQuery = query(
-                    collection(db, 'repair_requests'), 
-                    where('asset_id', '==', assetId),
-                    orderBy('created_at', 'desc')
-                );
-                const repairsSnap = await getDocs(repairsQuery);
-                setRepairs(repairsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                const { data: repairsData, error: repairsError } = await supabase
+                    .from('repair_requests')
+                    .select('*')
+                    .eq('asset_id', assetId)
+                    .order('created_at', { ascending: false });
+                
+                if (repairsData) setRepairs(repairsData);
                 setLoading(false);
             } catch (error) {
                 console.error("Error loading asset:", error);
@@ -157,7 +160,7 @@ export default function AssetPublic() {
                         <Calendar className="w-3.5 h-3.5" /> Procurement Date
                     </span>
                     <p className="text-sm font-black text-foreground/70 tracking-tight leading-none italic">
-                        {asset.created_at ? format(asset.created_at.toDate(), 'MMMM d, yyyy') : 'Registry Empty'}
+                        {asset.created_at ? format(new Date(asset.created_at), 'MMMM d, yyyy') : 'Registry Empty'}
                     </p>
                 </div>
                 <div className="space-y-2">
@@ -194,8 +197,8 @@ export default function AssetPublic() {
                     ) : repairs.map((r, idx) => (
                         <div key={r.id} className="p-10 hover:bg-slate-50/30 transition-all group flex gap-8">
                             <div className="flex flex-col items-center gap-2 pt-1 border-r border-border pr-8 min-w-[120px] shrink-0">
-                                <span className="text-sm font-black text-foreground leading-none">{r.created_at ? format(r.created_at.toDate(), 'MMM d') : '-'}</span>
-                                <span className="text-[10px] font-black uppercase text-muted-foreground/30 tracking-widest leading-none">{r.created_at ? format(r.created_at.toDate(), 'yyyy') : '-'}</span>
+                                <span className="text-sm font-black text-foreground leading-none">{r.created_at ? format(new Date(r.created_at), 'MMM d') : '-'}</span>
+                                <span className="text-[10px] font-black uppercase text-muted-foreground/30 tracking-widest leading-none">{r.created_at ? format(new Date(r.created_at), 'yyyy') : '-'}</span>
                             </div>
                             <div className="flex-1 min-w-0 space-y-4">
                                 <p className="text-base font-black text-foreground leading-tight group-hover:text-primary transition-colors tracking-tight">{r.description}</p>
