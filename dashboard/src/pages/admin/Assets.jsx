@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/AuthContext';
 import StatusBadge from '../../components/StatusBadge';
 import { Package, Plus, Search, QrCode, Edit2, Trash2, Printer, CheckSquare, Square, X } from 'lucide-react';
@@ -32,13 +31,28 @@ export default function Assets() {
     const [selectMode, setSelectMode] = useState(false);
 
     useEffect(() => {
-        const assetsQuery = query(collection(db, 'assets'), orderBy('created_at', 'desc'));
-        const unsubscribe = onSnapshot(assetsQuery, (snapshot) => {
-            const assetsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setAssets(assetsList);
+        const fetchAssets = async () => {
+            const { data, error } = await supabase
+                .from('assets')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (data) setAssets(data);
             setLoading(false);
-        });
-        return () => unsubscribe();
+        };
+
+        fetchAssets();
+
+        const channel = supabase
+            .channel('assets_all')
+            .on('postgres_changes', { event: '*', table: 'assets' }, () => {
+                fetchAssets();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const filtered = assets.filter(a => {
@@ -167,14 +181,22 @@ export default function Assets() {
         setSaving(true);
         try {
             if (editing) {
-                await updateDoc(doc(db, 'assets', editing.id), { ...form, updated_at: serverTimestamp() });
+                const { error } = await supabase
+                    .from('assets')
+                    .update({ ...form, updated_at: new Date().toISOString() })
+                    .eq('id', editing.id);
+                if (error) throw error;
                 sileo.success({ title: 'Asset Updated', description: `Successfully updated ${form.name}.` });
             } else {
-                await addDoc(collection(db, 'assets'), { ...form, created_at: serverTimestamp(), updated_at: serverTimestamp() });
+                const { error } = await supabase
+                    .from('assets')
+                    .insert([{ ...form }]);
+                if (error) throw error;
                 sileo.success({ title: 'Asset Created', description: `Successfully added ${form.name}.` });
             }
             setShowModal(false);
         } catch (error) {
+            console.error('Save error:', error);
             sileo.error({ title: 'Save Failed', description: 'Could not save asset information.' });
         } finally {
             setSaving(false);
@@ -184,7 +206,11 @@ export default function Assets() {
     async function handleDelete(id) {
         if (!confirm('Permanently delete this asset?')) return;
         try {
-            await deleteDoc(doc(db, 'assets', id));
+            const { error } = await supabase
+                .from('assets')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
             sileo.success({ title: 'Asset Deleted', description: 'Registration has been removed.' });
         } catch (error) {
             sileo.error({ title: 'Delete Failed', description: 'Could not remove the asset.' });
@@ -227,12 +253,12 @@ export default function Assets() {
                             <Printer className="w-4 h-4" /> Export Labels ({selected.size})
                         </Button>
                     )}
-                    {(role === 'admin' || role === 'principal' || role === 'supervisor') && (
+                    {(role === 'admin' || role === 'principal') && (
                         <Button onClick={() => { setSelectMode(s => !s); setSelected(new Set()); }} variant={selectMode ? 'secondary' : 'outline'} className="h-9 text-sm gap-2">
                             <QrCode className="w-4 h-4" /> {selectMode ? 'Dismiss' : 'Batch Labels'}
                         </Button>
                     )}
-                    {(role === 'admin' || role === 'principal' || role === 'supervisor') && (
+                    {(role === 'admin' || role === 'principal') && (
                         <Button onClick={openCreate} className="h-9 bg-[hsl(172,75%,17%)] hover:bg-[hsl(172,75%,22%)] text-white text-sm gap-2">
                             <Plus className="w-4 h-4" /> New Asset
                         </Button>
