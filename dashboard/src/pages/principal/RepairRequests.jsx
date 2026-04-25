@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/AuthContext';
 import StatusBadge from '../../components/StatusBadge';
 import { AlertTriangle, Search, CheckCircle, ArrowUpCircle, Wrench, ChevronRight, School, UserCircle, Send, X, Check, Image as ImageIcon, Hash, Clock, ShieldCheck, Activity } from 'lucide-react';
@@ -34,38 +33,45 @@ export default function PrincipalRepairRequests() {
     const [escalationAttempted, setEscalationAttempted] = useState(false);
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(
-            collection(db, 'repair_requests'),
-            (snapshot) => {
-                const requestsList = snapshot.docs.map(doc => {
-                    /** @type {any} */
-                    const data = doc.data();
-                    return { ...data, id: doc.id };
-                }).sort((a, b) => {
-                    /** @type {any} */ const reqA = a;
-                    /** @type {any} */ const reqB = b;
-                    const dateA = reqA.created_at?.toDate ? reqA.created_at.toDate() : new Date(0);
-                    const dateB = reqB.created_at?.toDate ? reqB.created_at.toDate() : new Date(0);
-                    return dateB - dateA;
-                });
-                setRequests(requestsList);
-                setLoading(false);
-            },
-            (error) => {
-                console.error('RepairRequests fetch error:', error);
-                setLoading(false);
-            }
-        );
+        const fetchRequests = async () => {
+            const { data, error } = await supabase
+                .from('repair_requests')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (data) setRequests(data);
+            setLoading(false);
+        };
 
-        const staffQuery = query(collection(db, 'users'), where('role', '==', 'maintenance'));
-        const unsubscribeStaff = onSnapshot(staffQuery, (snapshot) => {
-            const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            setMaintenanceStaff(list);
-        });
+        const fetchStaff = async () => {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('role', 'maintenance');
+            
+            if (data) setMaintenanceStaff(data);
+        };
+
+        fetchRequests();
+        fetchStaff();
+
+        const channelRequests = supabase
+            .channel('repair_requests_principal')
+            .on('postgres_changes', { event: '*', table: 'repair_requests' }, () => {
+                fetchRequests();
+            })
+            .subscribe();
+
+        const channelStaff = supabase
+            .channel('staff_sync')
+            .on('postgres_changes', { event: '*', table: 'profiles' }, () => {
+                fetchStaff();
+            })
+            .subscribe();
 
         return () => {
-            unsubscribe();
-            unsubscribeStaff();
+            supabase.removeChannel(channelRequests);
+            supabase.removeChannel(channelStaff);
         };
     }, []);
 
@@ -78,11 +84,17 @@ export default function PrincipalRepairRequests() {
     async function updateRequest(id, status, extraData = {}) {
         setSaving(true);
         try {
-            await updateDoc(doc(db, 'repair_requests', id), { 
-                status, 
-                ...extraData,
-                updated_at: serverTimestamp() 
-            });
+            const now = new Date().toISOString();
+            const { error } = await supabase
+                .from('repair_requests')
+                .update({ 
+                    status, 
+                    ...extraData,
+                    updated_at: now
+                })
+                .eq('id', id);
+
+            if (error) throw error;
             
             sileo.success({
                 title: 'Status Updated',
@@ -90,6 +102,7 @@ export default function PrincipalRepairRequests() {
             });
             setSelected(null);
         } catch (error) {
+            console.error('Update error:', error);
             sileo.error({ title: 'Update Failed', description: 'Could not update request status.' });
         } finally {
             setSaving(false);
@@ -106,34 +119,44 @@ export default function PrincipalRepairRequests() {
         
         setSaving(true);
         try {
-            await updateDoc(doc(db, 'repair_requests', selected.id), {
-                status: 'In Progress',
-                principal_notes: notes,
-                assigned_to_name: assignedTo,
-                approved_by_name: currentUser?.full_name,
-                approved_at: serverTimestamp(),
-                scheduled_start_date: scheduledStartDate,
-                sla_deadline: slaDeadline.toISOString(),
-                updated_at: serverTimestamp()
-            });
+            const now = new Date().toISOString();
+            const { error: rrError } = await supabase
+                .from('repair_requests')
+                .update({
+                    status: 'In Progress',
+                    principal_notes: notes,
+                    assigned_to_name: assignedTo,
+                    approved_by_name: currentUser?.full_name,
+                    approved_at: now,
+                    scheduled_start_date: scheduledStartDate,
+                    sla_deadline: slaDeadline.toISOString(),
+                    updated_at: now
+                })
+                .eq('id', selected.id);
+
+            if (rrError) throw rrError;
             
-            await addDoc(collection(db, 'maintenance_tasks'), {
-                repair_request_id: selected.id,
-                request_number: selected.request_number || `RR-${Date.now().toString().slice(-6)}`,
-                asset_name: selected.asset_name,
-                description: selected.description || '',
-                photo_url: selected.photo_url || '',
-                reported_by_name: selected.reported_by_name || '',
-                asset_code: selected.asset_code || '',
-                school_name: selected.school_name || currentUser?.school_name || '',
-                assigned_to_name: assignedTo,
-                priority: selected.priority,
-                status: 'Assigned',
-                scheduled_start_date: scheduledStartDate,
-                sla_deadline: slaDeadline.toISOString(),
-                created_at: serverTimestamp(),
-                updated_at: serverTimestamp()
-            });
+            const { error: mtError } = await supabase
+                .from('maintenance_tasks')
+                .insert([{
+                    repair_request_id: selected.id,
+                    request_number: selected.request_number || `RR-${Date.now().toString().slice(-6)}`,
+                    asset_name: selected.asset_name,
+                    description: selected.description || '',
+                    photo_url: selected.photo_url || '',
+                    reported_by_name: selected.reported_by_name || '',
+                    asset_code: selected.asset_code || '',
+                    school_name: selected.school_name || currentUser?.school_name || '',
+                    assigned_to_name: assignedTo,
+                    priority: selected.priority,
+                    status: 'Assigned',
+                    scheduled_start_date: scheduledStartDate,
+                    sla_deadline: slaDeadline.toISOString(),
+                    created_at: now,
+                    updated_at: now
+                }]);
+
+            if (mtError) throw mtError;
 
             sileo.success({
                 title: 'Request Approved',
@@ -141,6 +164,7 @@ export default function PrincipalRepairRequests() {
             });
             setSelected(null);
         } catch (error) {
+            console.error('Approval error:', error);
             sileo.error({ title: 'Approval Failed', description: 'Could not process the approval.' });
         } finally {
             setSaving(false);
@@ -152,10 +176,11 @@ export default function PrincipalRepairRequests() {
             sileo.error({ title: 'Reason Required', description: 'Please provide a reason for rejection in the notes field.' });
             return;
         }
+        const now = new Date().toISOString();
         await updateRequest(selected.id, 'Rejected', {
             principal_notes: notes,
             rejected_by_name: currentUser?.full_name,
-            rejected_at: serverTimestamp()
+            rejected_at: now
         });
     }
 
@@ -168,10 +193,11 @@ export default function PrincipalRepairRequests() {
             });
             return;
         }
+        const now = new Date().toISOString();
         await updateRequest(selected.id, 'Escalated', { 
             escalated_reason: escalationReason,
             escalated_by_name: currentUser?.full_name,
-            escalated_at: serverTimestamp()
+            escalated_at: now
         });
     }
 
@@ -268,7 +294,7 @@ export default function PrincipalRepairRequests() {
                                 </div>
                                 <div className="hidden sm:flex items-center">
                                     <span className="text-xs text-muted-foreground">
-                                        {req.created_at?.toDate ? format(req.created_at.toDate(), 'MMM d, yyyy') : ''}
+                                        {req.created_at ? format(new Date(req.created_at), 'MMM d, yyyy') : ''}
                                     </span>
                                 </div>
                             </div>
@@ -305,7 +331,7 @@ export default function PrincipalRepairRequests() {
                                     <div>
                                         <Label className="text-xs text-muted-foreground">Date</Label>
                                         <p className="text-sm font-medium text-foreground">
-                                            {selected.created_at?.toDate ? format(selected.created_at.toDate(), 'MMM d, yyyy') : 'Recently'}
+                                            {selected.created_at ? format(new Date(selected.created_at), 'MMM d, yyyy') : 'Recently'}
                                         </p>
                                     </div>
                                     {selected.sla_deadline && (
