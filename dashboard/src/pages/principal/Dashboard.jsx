@@ -6,8 +6,7 @@ import StatusBadge from '../../components/StatusBadge';
 import { CalendarDays, AlertTriangle, Clock, Wrench, CheckCircle, ArrowUpRight, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format, parseISO, isToday } from 'date-fns';
-import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
 export default function PrincipalDashboard() {
@@ -17,12 +16,29 @@ export default function PrincipalDashboard() {
 
     useEffect(() => {
         if (!currentUser) return;
-        const q = query(collection(db, 'repair_requests'), orderBy('created_at', 'desc'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setRequests(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+
+        const fetchRequests = async () => {
+            const { data, error } = await supabase
+                .from('repair_requests')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (data) setRequests(data);
             setLoading(false);
-        });
-        return () => unsubscribe();
+        };
+
+        fetchRequests();
+
+        const channel = supabase
+            .channel('requests_principal')
+            .on('postgres_changes', { event: '*', table: 'repair_requests' }, () => {
+                fetchRequests();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [currentUser]);
 
     if (loading) {
@@ -119,7 +135,7 @@ export default function PrincipalDashboard() {
                                         </div>
                                         <StatusBadge status={req.priority} size="sm" />
                                         <span className="label-mono text-muted-foreground/50 text-right">
-                                            {req.created_at?.toDate ? format(req.created_at.toDate(), 'MMM d') : ''}
+                                            {req.created_at ? format(new Date(req.created_at), 'MMM d') : ''}
                                         </span>
                                     </div>
                                 </Link>
