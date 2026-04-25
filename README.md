@@ -1,231 +1,103 @@
-# ASSETLINK-v1
-AssetLink is a school asset management and QR-enabled repair tracking web app for Philippine public schools under DepEd. Teachers scan QR codes on classroom assets to report damage, which automatically generates repair tickets routed to principals, maintenance staff, barangay officials, and DepEd supervisors. The system replaces manual logbooks and paper forms with a transparent, accountable digital workflow — ensuring classrooms stay well-maintained and repair requests never get lost.
+# AssetLink — Smart School Maintenance
+
+AssetLink is a three-tier, QR-enabled asset management and repair tracking system designed for Philippine public schools. It replaces manual paper logbooks with a transparent, digital workflow that connects teachers, principals, and maintenance staff.
 
 ---
 
-## 🚀 Quick Start (Localhost Development)
+## 🏗️ Architecture
+
+The project is structured as a **monorepo** with three distinct services working together:
+
+### 1. `landing/` — The Public Face
+
+- **Role**: Marketing, value proposition, and user onboarding.
+- **Tech**: Next.js (App Router), Framer Motion, Lenis (Smooth Scroll), Tailwind CSS.
+- **Purpose**: Explains the system's impact and redirects users to the functional dashboard.
+- **Port**: `http://localhost:3000`
+
+### 2. `dashboard/` — The Internal Engine
+
+- **Role**: Core productivity application for all user roles.
+- **Tech**: Vite, React, Radix UI, TanStack Query, Recharts.
+- **Purpose**: Role-based portal for scanning QR codes, reporting damage, and managing repair workflows.
+- **Port**: `http://localhost:5173`
+
+### 3. `backend/` — The Source of Truth
+
+- **Role**: API Service & Data Persistence.
+- **Tech**: Node.js, Express, Firebase (Admin).
+- **Purpose**: Manages the centralized database, handles business logic, and powers the dashboard.
+- **Port**: `http://localhost:3001`
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-- **Node.js** v18+ ([download](https://nodejs.org))
-- **npm** or **yarn**
+
+- **Node.js** v18 or higher
+- **pnpm** (Recommended package manager)
 - **Git**
 
-### Setup
+### Installation
 
-1. **Clone & Install**
-```bash
-git clone https://github.com/bagatata05/ASSETLINK-v1
-cd ASSETLINK-v1
-npm install
-```
+1. **Clone the repository**
 
-2. **Start Development Server**
-```bash
-npm run dev
-```
-The app opens at `http://localhost:5173`
+   ```bash
+   git clone https://github.com/bagatata05/ASSETLINK-WITH-QR-CODE.git
+   cd ASSETLINK-WITH-QR-CODE
+   ```
 
-3. **Login with Demo Users**
-AssetLink runs in **mock mode** by default (no backend required). Login with any of these:
+2. **Install all dependencies**
+   Run this from the root directory to install dependencies for all three tiers:
+   ```bash
+   pnpm install
+   ```
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | `admin@assetlink.ph` | (any) |
-| Teacher | `teacher@assetlink.ph` | (any) |
-| Principal | `principal@assetlink.ph` | (any) |
-| Supervisor | `supervisor@assetlink.ph` | (any) |
-| Maintenance | `maintenance@assetlink.ph` | (any) |
+### Running Locally
 
-**Mock data persists in localStorage** — close and reopen the browser to keep your data.
-
----
-
-## 📋 Features
-
-### Core Workflows
-- ✅ **Damage Reporting** — Teachers report asset damage with photos (or scan QR codes)
-- ✅ **Repair Request Routing** — Automatic workflows: Pending → Approved → In Progress → Teacher Verification → Completed
-- ✅ **Task Management** — Maintenance staff manage assigned repairs with status updates
-- ✅ **Maintenance Calendar** — Drag-and-drop weekly scheduling for repairs (maintenance only)
-- ✅ **Teacher Verification** — Teachers approve/reject repairs before final closure
-- ✅ **Escalation** — Urgent repairs escalate to principals, supervisors, or DepEd
-- ✅ **Analytics** — Real-time dashboards showing repair timelines, damage patterns, costs
-
-### Role-Based Access
-| Role | Permissions |
-|------|-------------|
-| **Teacher** | Report damage, verify completed repairs, view repair status |
-| **Admin** | Full system access, user/school management, analytics |
-| **Principal** | Approve/reject repair requests, assign to maintenance, view analytics |
-| **Supervisor** | Multi-school oversight, escalation queue, regional analytics |
-| **Maintenance** | View assigned tasks, update progress, drag-and-drop scheduling on calendar |
-
----
-
-## 🏗️ Project Structure
-
-```
-src/
-├── pages/              # Route components
-│   ├── Dashboard.jsx           # Overview (all roles)
-│   ├── Assets.jsx              # Asset inventory
-│   ├── ReportDamage.jsx        # Damage reporting + QR scanner placeholder
-│   ├── RepairRequests.jsx       # Request management + teacher verification
-│   ├── Tasks.jsx               # Maintenance task list
-│   ├── MaintenanceCalendar.jsx  # Drag-drop scheduling (maintenance only)
-│   ├── Analytics.jsx           # Repair metrics & timelines
-│   └── Schools.jsx             # School management
-├── components/         # Reusable UI components
-│   ├── Layout.jsx              # Navigation & role-based menu
-│   ├── StatusBadge.jsx         # Status indicators
-│   └── ui/                     # Shadcn composite components
-├── lib/
-│   ├── AuthContext.jsx         # Authentication & role state
-│   └── utils.js                # Utilities
-├── api/
-│   ├── base44Client.js         # API client (real or mock)
-│   ├── mockBase44.js           # Mock backend (localStorage-based)
-│   └── seedData.js             # Demo data
-└── App.jsx            # Router setup
-entities/              # Entity schemas (Base44 metadata)
-```
-
----
-
-## 🔄 Workflow Example: Reporting Damage
-
-### Teacher Flow
-1. Teacher visits **Report Damage** page
-2. Searches or scans QR code for asset (e.g., "Projector in Room 101")
-3. Describes damage: "Bulb burned out, no display"
-4. Uploads photo (optional)
-5. Submits request → **Principal is notified (email)**
-
-### Principal Flow
-1. Views **Repair Requests**, sees pending report
-2. Approves request & assigns to maintenance staff
-3. Repair request moves to **In Progress**
-
-### Maintenance Flow
-1. Views **My Tasks** → sees assigned repair
-2. Marks as *In Progress* → starts work
-3. Completes work, marks as **"Completed"**
-4. **Teacher is notified** to verify repair
-
-### Teacher Verification Flow
-1. Teacher receives email: "Repair ready for verification"
-2. Visits **Repair Requests**, inspects asset
-3. Either:
-   - ✅ **Approve & Close** — Repair complete
-   - ❌ **Reject & Rework** — Sends back to maintenance with feedback
-
----
-
-## 📊 Tech Stack
-
-- **Frontend:** React 18 + Vite
-- **UI:** Tailwind CSS + Shadcn components + Lucide icons
-- **State:** TanStack Query + React Context
-- **Routing:** React Router v6
-- **Charts:** Recharts
-- **DnD:** hello-pangea/dnd (drag-and-drop)
-- **Notifications:** Sonner toasts
-- **Data:** localStorage (mock), Base44 SDK (production)
-
----
-
-## 🔐 Authentication & Authorization
-
-All features are **role-gated** in the navigation:
-- **Routes** visible only to authorized roles (see `Layout.jsx`)
-- **Frontend enforcement** prevents UI accidents
-- **BACKEND TODO:** Add server-side validation on all endpoints
-
-See [PERMISSIONS.md](PERMISSIONS.md) for complete access control matrix.
-
----
-
-## 🛠️ Development Workflow
-
-### Edit Features
-Files auto-reload with Vite HMR. Make changes and save:
-```bash
-# Terminal 1: Start dev server
-npm run dev
-
-# Terminal 2: (optional) Run linter
-npm run lint
-```
-
-### Mock Data
-Edit `src/api/seedData.js` to add demo data. Changes appear on next refresh:
-```javascript
-// Add a new asset
-export const SEED_ASSETS = [
-  { id: 'ast_011', name: 'New Projector', ... },
-  ...
-];
-```
-
-### Add a New Page
-1. Create `src/pages/NewPage.jsx`
-2. Add route to `src/App.jsx`
-3. Add navigation item to `src/components/Layout.jsx` (with role filter)
-
----
-
-## 🚦 Build for Production
+To start the entire system (Landing, Dashboard, and Backend) simultaneously, run:
 
 ```bash
-npm run build       # Creates dist/
-npm run preview     # Preview production build
+pnpm dev
 ```
 
----
-
-## 📱 Backend Integration (Future)
-
-Currently runs in **mock mode** (`VITE_BASE44_REAL_BACKEND=false`).
-
-To connect to a real backend:
-1. Set `VITE_BASE44_REAL_BACKEND=true` in `.env`
-2. Configure `VITE_BASE44_APP_BASE_URL` and auth token
-3. Backend must implement endpoints in [API_SPECIFICATION.md](API_SPECIFICATION.md)
-4. Backend must enforce permissions in [PERMISSIONS.md](PERMISSIONS.md)
-
-See [API_SPECIFICATION.md](API_SPECIFICATION.md) for complete backend requirements.
+- **Landing Page**: Open `http://localhost:3000`
+- **Dashboard**: Open `http://localhost:5173`
+- **API Health**: Check `http://localhost:3001/`
 
 ---
 
-## 📖 Documentation
+## 📋 Key Dependencies
 
-- **[API_SPECIFICATION.md](API_SPECIFICATION.md)** — Complete endpoint reference for backend
-- **[PERMISSIONS.md](PERMISSIONS.md)** — Role-based access control matrix
-- **[MaintenanceTask Entity](entities/MaintenanceTask)** — Data schema
-- **[RepairRequest Entity](entities/RepairRequest)** — Data schema
-
----
-
-## ✨ Key Features (Coming Soon)
-
-- 🎥 QR code scanning integration (`react-qr-reader`)
-- 📍 Multi-school supervisor dashboard (`/supervisor-dashboard`)
-- 🏪 Barangay/DepEd escalation workflows
-- 📸 Before/after photo documentation
-- 🔔 Real-time push notifications
-- 📥 CSV export for analytics
+| Tier          | Primary Packages                                                          |
+| ------------- | ------------------------------------------------------------------------- |
+| **Landing**   | `next`, `framer-motion`, `lenis`, `lucide-react`, `tailwindcss`           |
+| **Dashboard** | `react`, `vite`, `@tanstack/react-query`, `@radix-ui/react-*`, `recharts` |
+| **Backend**   | `express`, `cors`, `firebase-admin`, `nodemon`, `helmet`                  |
 
 ---
 
-## 🤝 Contributing
+## 🔐 Role-Based Access
 
-1. Create a branch: `git checkout -b feature/my-feature`
-2. Make changes & test locally
-3. Commit: `git commit -m "feat: add feature"` (conventional commits)
-4. Push & create PR
+The system is optimized for three primary school roles:
+
+1.  **Teacher**: Reports damage via QR scan and verifies completed repairs.
+2.  **Principal**: Reviews reports, prioritizes tasks, and assigns work orders.
+3.  **Maintenance**: Manages a personal task list and updates repair status.
+
+---
+
+## 🤝 Workflow
+
+1.  **Scan**: User arrives at the **Landing** page, clicks "Sign In".
+2.  **Report**: Teacher scans an asset QR code in the **Dashboard** to report damage.
+3.  **Triage**: Principal reviews the request (data fetched from **Backend**) and assigns it.
+4.  **Repair**: Maintenance staff receives a work order and updates the status.
+5.  **Verify**: Teacher signs off on the fix, ensuring accountability.
 
 ---
 
 ## ⚖️ License
 
-DepEd AssetLink - Educational Use Only
+Educational Use Only — ITPE 104 / SDG 4
